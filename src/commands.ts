@@ -3,6 +3,15 @@ import path from 'node:path';
 import os from 'node:os';
 import { AnthropicService } from './anthropicService.js';
 import { MCPManager } from './mcpManager.js';
+import {
+  connectMCPServer,
+  disconnectMCPServer,
+  listMCPServers,
+  addMCPServer,
+  removeMCPServer,
+  setDefaultMCPServer,
+  showMCPStatus,
+} from './mcp/commands.js';
 
 const KOTA_DIR_NAME = '.kota-ai';
 const NOTES_DIR_NAME = 'notes';
@@ -77,6 +86,21 @@ function showHelp(): void {
   console.log('  mcp disconnect          Disconnect from MCP server');
   console.log('  mcp status              Check MCP connection status');
   console.log('  help                    Show this help information');
+  console.log('  init           Initialize KOTA directories');
+  console.log('  chat <message> Chat with KOTA AI');
+  console.log('  help           Show this help information');
+  console.log('\nMCP Commands:');
+  console.log('  mcp connect [name]      Connect to an MCP server');
+  console.log(
+    '  mcp disconnect          Disconnect from the current MCP server'
+  );
+  console.log('  mcp list                List available MCP servers');
+  console.log('  mcp add <name> <type>   Add a new MCP server configuration');
+  console.log('  mcp remove <name>       Remove an MCP server configuration');
+  console.log('  mcp default <name>      Set the default MCP server');
+  console.log(
+    '  mcp status              Show the status of the current MCP connection'
+  );
 }
 
 /**
@@ -109,6 +133,47 @@ export async function execCommand(args: string[]): Promise<void> {
       break;
     case 'help':
       showHelp();
+      break;
+    case 'mcp':
+      if (commandArgs.length === 0) {
+        console.error('Please provide an MCP subcommand.');
+        console.log(
+          'Available MCP subcommands: connect, disconnect, list, add, remove, default, status'
+        );
+        break;
+      }
+
+      const mcpSubcommand = commandArgs[0];
+      const mcpArgs = commandArgs.slice(1);
+
+      switch (mcpSubcommand) {
+        case 'connect':
+          await connectMCPServer(mcpArgs);
+          break;
+        case 'disconnect':
+          await disconnectMCPServer();
+          break;
+        case 'list':
+          listMCPServers();
+          break;
+        case 'add':
+          addMCPServer(mcpArgs);
+          break;
+        case 'remove':
+          removeMCPServer(mcpArgs);
+          break;
+        case 'default':
+          setDefaultMCPServer(mcpArgs);
+          break;
+        case 'status':
+          showMCPStatus();
+          break;
+        default:
+          console.error(`Unknown MCP subcommand: ${mcpSubcommand}`);
+          console.log(
+            'Available MCP subcommands: connect, disconnect, list, add, remove, default, status'
+          );
+      }
       break;
     default:
       console.error(`Unknown command: ${command}`);
