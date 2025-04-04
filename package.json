@@ -5,12 +5,12 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jayminwest/kota-ai.git" # TODO: Update if your repo URL is different
+    "url": "git+https://github.com/jayminwest/kota-ai.git"
   },
   "bugs": {
-    "url": "https://github.com/jayminwest/kota-ai/issues" # TODO: Update if your repo URL is different
+    "url": "https://github.com/jayminwest/kota-ai/issues"
   },
-  "homepage": "https://github.com/jayminwest/kota-ai#readme", # TODO: Update if your repo URL is different
+  "homepage": "https://github.com/jayminwest/kota-ai#readme",
   "bin": {
     "kota": "dist/cli.js"
   },
@@ -37,7 +37,7 @@
     "mcp",
     "typescript"
   ],
-  "author": "jayminwest", # TODO: Update if you prefer a different author name/format
+  "author": "jayminwest",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^22.14.0",
