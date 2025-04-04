@@ -5,6 +5,7 @@ import {
   MCPHttpConnection,
 } from '../types/mcp.js';
 import { MCPClient } from './client.js';
+import { ServerCapabilities, SupportedModel } from '@modelcontextprotocol/sdk';
 
 // Create a singleton instance of the MCP client
 const mcpClient = new MCPClient();
@@ -37,7 +38,7 @@ export async function connectMCPServer(args: string[]): Promise<void> {
       capabilities.supportedFeatures.length > 0
     ) {
       console.log('- Supported features:');
-      capabilities.supportedFeatures.forEach((feature) => {
+      capabilities.supportedFeatures.forEach((feature: string) => {
         console.log(`  - ${feature}`);
       });
     }
@@ -47,7 +48,7 @@ export async function connectMCPServer(args: string[]): Promise<void> {
       capabilities.supportedModels.length > 0
     ) {
       console.log('- Supported models:');
-      capabilities.supportedModels.forEach((model) => {
+      capabilities.supportedModels.forEach((model: SupportedModel) => {
         console.log(`  - ${model.id} (${model.name || 'Unnamed'})`);
       });
     }
@@ -94,7 +95,7 @@ export function listMCPServers(): void {
 
   console.log('Configured MCP servers:');
 
-  servers.forEach((server) => {
+  servers.forEach((server: MCPServerConfig) => {
     const isConnected = currentServer?.name === server.name;
     const isDefault = server.isDefault ? ' (default)' : '';
     const lastUsed = server.lastUsed
@@ -317,7 +318,7 @@ export function showMCPStatus(): void {
       capabilities.supportedFeatures.length > 0
     ) {
       console.log('- Supported features:');
-      capabilities.supportedFeatures.forEach((feature) => {
+      capabilities.supportedFeatures.forEach((feature: string) => {
         console.log(`  - ${feature}`);
       });
     }
@@ -327,7 +328,7 @@ export function showMCPStatus(): void {
       capabilities.supportedModels.length > 0
     ) {
       console.log('- Supported models:');
-      capabilities.supportedModels.forEach((model) => {
+      capabilities.supportedModels.forEach((model: SupportedModel) => {
         console.log(`  - ${model.id} (${model.name || 'Unnamed'})`);
       });
     }
