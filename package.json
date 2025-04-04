@@ -1,7 +1,16 @@
 {
-  "name": "kota-ai",
+  "name": "@jayminwest/kota-ai",
   "version": "1.0.0",
+  "description": "Knowledge Oriented Thinking Assistant",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jayminwest/kota-ai.git" # TODO: Update if your repo URL is different
+  },
+  "bugs": {
+    "url": "https://github.com/jayminwest/kota-ai/issues" # TODO: Update if your repo URL is different
+  },
+  "homepage": "https://github.com/jayminwest/kota-ai#readme", # TODO: Update if your repo URL is different
   "bin": {
     "kota": "dist/cli.js"
   },
@@ -9,7 +18,9 @@
     ".": "./dist/index.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsc",
@@ -18,10 +29,16 @@
     "typecheck": "tsc --noEmit",
     "test": "echo \"Error: no test specified yet\" && exit 0"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "keywords": [
+    "ai",
+    "knowledge management",
+    "cli",
+    "local-first",
+    "mcp",
+    "typescript"
+  ],
+  "author": "jayminwest", # TODO: Update if you prefer a different author name/format
+  "license": "MIT",
   "devDependencies": {
     "@types/node": "^22.14.0",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
