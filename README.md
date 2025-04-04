@@ -130,6 +130,27 @@ KOTA-AI is designed to work seamlessly with the Model Context Protocol (MCP), al
 - Share context between different AI applications
 - Maintain privacy while leveraging powerful models
 
+## 🔑 Environment Variables
+
+KOTA-AI requires the following environment variables to be set:
+
+| Variable            | Description                              | Required For          |
+| ------------------- | ---------------------------------------- | --------------------- |
+| `ANTHROPIC_API_KEY` | Your Anthropic API key for Claude access | AI chat functionality |
+
+You can set these environment variables in your shell profile or before running KOTA:
+
+```bash
+# For bash/zsh
+export ANTHROPIC_API_KEY=your_api_key_here
+
+# For Windows Command Prompt
+set ANTHROPIC_API_KEY=your_api_key_here
+
+# For Windows PowerShell
+$env:ANTHROPIC_API_KEY="your_api_key_here"
+```
+
 ## 🧠 Consciousness Framework
 
 The consciousness framework is what sets KOTA-AI apart:

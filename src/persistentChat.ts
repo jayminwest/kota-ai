@@ -1,5 +1,7 @@
 import blessed from 'blessed';
 import { execCommand } from './commands.js';
+import { AnthropicService } from './anthropicService.js';
+import { MCPManager } from './mcpManager.js';
 
 interface ChatMessage {
   content: string;
@@ -15,6 +17,8 @@ export class PersistentChatInterface {
   private messageHistory: ChatMessage[] = [];
   private inputHistory: string[] = [];
   private inputHistoryIndex: number = -1;
+  private anthropicService: AnthropicService | null = null;
+  private mcpManager: MCPManager = MCPManager.getInstance();
 
   constructor() {
     // Initialize the blessed screen
@@ -94,18 +98,42 @@ export class PersistentChatInterface {
     this.inputBox.key(['down'], () => this.navigateInputHistory('down'));
 
     // Add Ctrl+C handler to inputBox to ensure it works when input has focus
-    this.inputBox.key(['C-c'], () => process.exit(0));
+    this.inputBox.key(['C-c'], () => this.cleanupAndExit());
 
     // Exit on Escape, Control-C, or q
-    this.screen.key(['escape', 'C-c', 'q'], () => process.exit(0));
+    this.screen.key(['escape', 'C-c', 'q'], () => this.cleanupAndExit());
 
     // Focus the input box by default
     this.inputBox.focus();
 
+    // Initialize Anthropic service if API key is available
+    try {
+      this.anthropicService = AnthropicService.getInstance();
+    } catch (error) {
+      this.addSystemMessage(
+        `Error initializing Anthropic service: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+      this.addSystemMessage(
+        'Please set the ANTHROPIC_API_KEY environment variable to use AI chat functionality.'
+      );
+    }
+
     // Display welcome message
     this.addSystemMessage(
-      'Welcome to KOTA AI! Type a message to chat or use /run followed by a command to execute KOTA commands.'
+      'Welcome to KOTA AI! Type a message to chat with Claude or use /run followed by a command to execute KOTA commands.'
     );
+    this.addSystemMessage(
+      'MCP commands: /run mcp connect <path>, /run mcp disconnect, /run mcp status'
+    );
+  }
+
+  // Clean up resources and exit
+  private cleanupAndExit(): void {
+    // Ensure MCP server is disconnected
+    this.mcpManager.disconnect();
+    process.exit(0);
   }
 
   // Start the chat interface
@@ -153,22 +181,34 @@ export class PersistentChatInterface {
         );
       } catch (error) {
         this.addSystemMessage(
-          `Error executing command: ${error instanceof Error ? error.message : String(error)}`
+          `Error executing command: ${
+            error instanceof Error ? error.message : String(error)
+          }`
         );
       }
     } else {
       // Handle chat message
-      this.addAssistantMessage('Processing your request...');
+      if (!this.anthropicService) {
+        this.addSystemMessage(
+          'Anthropic service is not initialized. Please set the ANTHROPIC_API_KEY environment variable.'
+        );
+        return;
+      }
+
+      this.addAssistantMessage('Thinking...');
 
       try {
-        // Here we would integrate with the actual AI model
-        // For now, just send a placeholder response
-        setTimeout(() => {
-          this.updateLastAssistantMessage(
-            'This is a placeholder response from KOTA AI. In the full implementation, this would be a response from the AI model.'
-          );
-          this.screen.render();
-        }, 1000);
+        await this.anthropicService.chatWithAI(
+          input,
+          (chunk) => {
+            this.updateLastAssistantMessage((existing) => existing + chunk);
+            this.screen.render();
+          },
+          () => {
+            // When streaming is complete, do nothing special
+            this.screen.render();
+          }
+        );
       } catch (error) {
         this.addSystemMessage(
           `Error: ${error instanceof Error ? error.message : String(error)}`
@@ -186,10 +226,12 @@ export class PersistentChatInterface {
     const originalConsoleLog = console.log;
     const originalConsoleError = console.error;
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     console.log = (...args: any[]) => {
       output += args.join(' ') + '\n';
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     console.error = (...args: any[]) => {
       output += 'ERROR: ' + args.join(' ') + '\n';
     };
@@ -251,12 +293,20 @@ export class PersistentChatInterface {
     this.updateChatBox();
   }
 
-  // Update the last assistant message (used for updating "thinking" states)
-  private updateLastAssistantMessage(content: string): void {
+  // Update the last assistant message (used for updating "thinking" states and streaming)
+  private updateLastAssistantMessage(
+    contentUpdater: string | ((existing: string) => string)
+  ): void {
     // Find the last assistant message
     for (let i = this.messageHistory.length - 1; i >= 0; i--) {
       if (this.messageHistory[i].sender === 'assistant') {
-        this.messageHistory[i].content = content;
+        if (typeof contentUpdater === 'string') {
+          this.messageHistory[i].content = contentUpdater;
+        } else {
+          this.messageHistory[i].content = contentUpdater(
+            this.messageHistory[i].content
+          );
+        }
         this.updateChatBox();
         break;
       }
