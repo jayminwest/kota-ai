@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
+import fs from 'node:fs'; // Use node: prefix for built-ins
+import path from 'node:path';
+import os from 'node:os';
 
 const KOTA_DIR_NAME = '.kota-ai';
 const NOTES_DIR_NAME = 'notes';

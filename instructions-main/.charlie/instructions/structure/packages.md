@@ -1,43 +1,42 @@
-# Packages
+# Package Structure
 
-All packages must follow these `package.json` rules:
+The project must follow these `package.json` rules:
 
-- `type` must be set to `module`
-- `exports` should be used instead of `main` or `module`
-  - ALL source code should be exported from the root (`.`) path
-  - Any test-specific code should be exported from a `test` path
-  - Exports should use the `.ts` extension
+- `type` must be set to `module`.
+- `exports` should be used instead of `main` or `module`.
+  - ALL production source code should be exported from the root (`.`) path.
+  - Any test-specific code should be exported from a `test` path.
+  - Exports should point to the compiled JavaScript files (e.g., in `dist/`).
   - Good example:
-    - `"exports": "./src/index.ts"`
-    - `"exports": { ".": "./src/index.ts", "./test": "./src/test/index.ts" }`
+    - `"exports": { ".": "./dist/index.js", "./test": "./dist/test/index.js" }`
   - BAD example:
-    - `"main": "./src/index.ts"` (don't use `main` or `module`)
-    - `"exports": "./src/index.js"` (don't use `.js` for exports)
-    - `"exports": { ".": "./src/index.ts", "./test": "./src/test/index.ts", "./test/mocks": "./src/test/mocks.ts" }` (don't export multiple paths: "./test" and "./test/mocks")
-- `types` should be used instead of `typings`
-- NEVER use TypeScript path resolution (`paths` in `tsconfig.json`)
-  - Use ESM subpath imports instead if this is desired (eg: `"imports": { "#/ui": "./ui/index.ts" }`)
+    - `"main": "./dist/index.js"` (don't use `main` or `module`)
+    - `"exports": "./src/index.ts"` (don't export TypeScript source files)
+    - `"exports": { ".": "./dist/index.js", "./test": "./dist/test/index.js", "./test/mocks": "./dist/test/mocks.js" }` (don't export multiple test paths unless absolutely necessary)
+- `types` should point to the main declaration file (e.g., `"types": "./dist/index.d.ts"`).
+- NEVER use TypeScript path resolution (`paths` in `tsconfig.json`).
+  - Use ESM subpath imports instead if this is desired (e.g., `"imports": { "#/utils": "./dist/utils/index.js" }`).
 
 
 # Directory Structure
 
-All packages must be placed in `packages/<package-name>/`. Each package should have the following:
+The project should have the following structure:
 
 - A `src/` directory containing the core source code.
 - A single entrypoint in `src/index.ts` that exports the package's public API.
 - Place test helpers, utilities, or mocks in `src/test/` with a single entrypoint in `src/test/index.ts`.
 - Tests should be placed beside source code like `src/my-file.ts` and `src/my-file.test.ts` (NOT `src/test/my-file.test.ts` or `test/my-file.test.ts`).
 - A standard set of config files (like `package.json` and `tsconfig.json`) to ensure consistency.
-- The `package.json` must define an "exports" object with `"." : "./src/index.ts"` and optionally `"./test": "./src/test/index.ts"`, ensuring clearly defined entrypoints for production and test.
+- The `package.json` must define an "exports" object with `"." : "./dist/index.js"` and optionally `"./test": "./dist/test/index.js"`, ensuring clearly defined entrypoints for production and test code.
 
 Example:
 
 ```
-packages/foo/package.json
-packages/foo/tsconfig.json
-packages/foo/src/index.ts
-packages/foo/src/bar.ts
-packages/foo/src/bar.test.ts
-packages/foo/test/index.ts
-packages/foo/test/setup.ts
+kota-ai/package.json
+kota-ai/tsconfig.json
+kota-ai/src/index.ts
+kota-ai/src/core/client.ts
+kota-ai/src/core/client.test.ts
+kota-ai/src/test/index.ts
+kota-ai/src/test/mocks.ts
 ```

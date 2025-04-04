@@ -8,8 +8,7 @@
 - Use type guards to narrow types in conditional blocks
 - Create custom types for complex data structures used throughout the application
 - Utilize TypeScript's utility types (e.g., `Partial`, `Pick`, `Omit`) to manipulate existing types
-- Never use `React.FC`. Use a function declaration instead
-- Functions should accept an object parameter (like `args` or `props`) instead of multiple parameters
+- Functions should accept an object parameter (like `args` or `props`) instead of multiple parameters, unless the function is very simple (1-2 primitive arguments).
   - Good examples:
     ```ts
     function myFunction(args: { foo: boolean; bar: string }) {}
