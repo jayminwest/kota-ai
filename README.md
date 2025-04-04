@@ -19,24 +19,28 @@ KOTA-AI reimagines personal knowledge management by combining the power of moder
 ## 🚀 Implementation Plan
 
 ### Phase 1: Core Infrastructure
+
 - Set up TypeScript project structure ✓
 - Implement basic CLI interface
 - Create local storage system for MDX files
 - Develop file operations (create, read, update, delete)
 
 ### Phase 2: Knowledge Management
+
 - Implement frontmatter parsing for metadata
 - Create bidirectional linking system
 - Develop basic search functionality
 - Build knowledge entry management
 
 ### Phase 3: MCP Integration
+
 - Create MCP client interface
 - Implement server connection handling
 - Develop model selection and switching
 - Build context management system
 
 ### Phase 4: User Experience
+
 - Enhance CLI with colors and formatting
 - Implement interactive chat mode
 - Create visualization components
@@ -44,20 +48,20 @@ KOTA-AI reimagines personal knowledge management by combining the power of moder
 
 ## 📋 Commands
 
-| Command | Description |
-|---------|-------------|
-| `kota init` | Initialize KOTA in your home directory |
-| `kota status` | Display current status and configuration |
-| `kota connect <server>` | Connect to an MCP server |
-| `kota create <title> <content>` | Create a new knowledge entry |
-| `kota list` | List all knowledge entries |
-| `kota search <query>` | Search your knowledge base |
-| `kota view <id>` | View a specific knowledge entry |
-| `kota edit <id>` | Edit a knowledge entry |
-| `kota delete <id>` | Delete a knowledge entry |
-| `kota chat` | Start an interactive chat session |
-| `kota models` | List available models |
-| `kota select <model>` | Select a model to use |
+| Command                         | Description                              |
+| ------------------------------- | ---------------------------------------- |
+| `kota init`                     | Initialize KOTA in your home directory   |
+| `kota status`                   | Display current status and configuration |
+| `kota connect <server>`         | Connect to an MCP server                 |
+| `kota create <title> <content>` | Create a new knowledge entry             |
+| `kota list`                     | List all knowledge entries               |
+| `kota search <query>`           | Search your knowledge base               |
+| `kota view <id>`                | View a specific knowledge entry          |
+| `kota edit <id>`                | Edit a knowledge entry                   |
+| `kota delete <id>`              | Delete a knowledge entry                 |
+| `kota chat`                     | Start an interactive chat session        |
+| `kota models`                   | List available models                    |
+| `kota select <model>`           | Select a model to use                    |
 
 ## 🧩 Project Structure
 
@@ -81,28 +85,31 @@ kota-ai/
 ## 💻 Development Workflow
 
 1. **Setup Environment**
+
    ```bash
    # Install dependencies
    npm install
-   
+
    # Build the package
    npm run build
-   
+
    # Link locally for testing
    npm link
    ```
 
 2. **Implement Core Features**
+
    - Start with the storage module for MDX files
    - Implement the CLI interface
    - Create the knowledge management system
    - Add MCP integration
 
 3. **Testing**
+
    ```bash
    # Run tests
    npm test
-   
+
    # Test CLI
    kota --help
    ```

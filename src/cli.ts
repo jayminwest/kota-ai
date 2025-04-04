@@ -1,70 +1,45 @@
 #!/usr/bin/env node
 
-import fs from 'node:fs'; // Use node: prefix for built-ins
-import path from 'node:path';
-import os from 'node:os';
+import { Command } from 'commander';
+import { execCommand } from './commands.js';
+import { PersistentChatInterface } from './persistentChat.js';
 
-const KOTA_DIR_NAME = '.kota-ai';
-const NOTES_DIR_NAME = 'notes';
-
-function getKotaDir(): string {
-  return path.join(os.homedir(), KOTA_DIR_NAME);
-}
-
-function getNotesDir(): string {
-  return path.join(getKotaDir(), NOTES_DIR_NAME);
-}
-
-function initializeKota(): void {
-  const kotaDir = getKotaDir();
-  const notesDir = getNotesDir();
-
-  console.log(`Initializing KOTA in ${kotaDir}...`);
-
-  try {
-    if (!fs.existsSync(kotaDir)) {
-      fs.mkdirSync(kotaDir);
-      console.log(`Created KOTA directory: ${kotaDir}`);
-    } else {
-      console.log(`KOTA directory already exists: ${kotaDir}`);
-    }
-
-    if (!fs.existsSync(notesDir)) {
-      fs.mkdirSync(notesDir);
-      console.log(`Created notes directory: ${notesDir}`);
-    } else {
-      console.log(`Notes directory already exists: ${notesDir}`);
-    }
-
-    console.log('KOTA initialized successfully.');
-
-  } catch (error) {
-    console.error('Failed to initialize KOTA:', error);
-    process.exit(1); // Exit with error code
-  }
-}
-
+/**
+ * Parse command line arguments and execute the appropriate command
+ * or launch the persistent chat interface if no arguments are provided
+ */
 function main(): void {
-  // Very basic argument parsing for now
   const args = process.argv.slice(2); // Skip 'node' and script path
 
+  // If no arguments provided, launch the persistent chat interface
   if (args.length === 0) {
-    console.log('Usage: kota <command>');
-    console.log('Available commands: init');
-    process.exit(1);
+    const chatInterface = new PersistentChatInterface();
+    chatInterface.start();
+    return;
   }
 
-  const command = args[0];
+  // Otherwise, handle the command
+  const program = new Command();
 
-  switch (command) {
-    case 'init':
-      initializeKota();
-      break;
-    default:
-      console.error(`Unknown command: ${command}`);
-      console.log('Available commands: init');
-      process.exit(1);
-  }
+  program
+    .name('kota')
+    .description('Command line interface for KOTA AI')
+    .version('1.0.0')
+    .allowExcessArguments(true)
+    .allowUnknownOption(true)
+    .action(async () => {
+      try {
+        await execCommand(args);
+      } catch (error) {
+        console.error(
+          'Error:',
+          error instanceof Error ? error.message : String(error)
+        );
+        process.exit(1);
+      }
+    });
+
+  program.parse(process.argv);
 }
 
 // Run the main function
