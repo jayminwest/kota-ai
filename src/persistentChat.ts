@@ -93,10 +93,11 @@ export class PersistentChatInterface {
     this.inputBox.key(['up'], () => this.navigateInputHistory('up'));
     this.inputBox.key(['down'], () => this.navigateInputHistory('down'));
 
+    // Add Ctrl+C handler to inputBox to ensure it works when input has focus
+    this.inputBox.key(['C-c'], () => process.exit(0));
+
     // Exit on Escape, Control-C, or q
-    this.screen.key(['escape', 'C-c', 'q'], () => {
-      return process.exit(0);
-    });
+    this.screen.key(['escape', 'C-c', 'q'], () => process.exit(0));
 
     // Focus the input box by default
     this.inputBox.focus();
@@ -276,17 +277,24 @@ export class PersistentChatInterface {
 
   // Update the chat box with all messages
   private updateChatBox(): void {
-    let content = '';
+    // Clear the content first
+    this.chatBox.setContent('');
 
+    // Build the content and add it with setContent
+    let content = '';
     for (const message of this.messageHistory) {
       const timeString = message.timestamp.toLocaleTimeString();
 
-      if (message.sender === 'user') {
-        content += `{bold}[You] ${timeString}{/bold}\n${message.content}\n\n`;
-      } else if (message.sender === 'assistant') {
-        content += `{bold}{green}[KOTA AI] ${timeString}{/green}{/bold}\n${message.content}\n\n`;
-      } else {
-        content += `{bold}{yellow}[System] ${timeString}{/yellow}{/bold}\n${message.content}\n\n`;
+      switch (message.sender) {
+        case 'user':
+          content += `{bold}[You] ${timeString}{/bold}\n${message.content}\n\n`;
+          break;
+        case 'assistant':
+          content += `{bold}{green}[KOTA AI] ${timeString}{/green}{/bold}\n${message.content}\n\n`;
+          break;
+        case 'system':
+          content += `{bold}{yellow}[System] ${timeString}{/yellow}{/bold}\n${message.content}\n\n`;
+          break;
       }
     }
 
