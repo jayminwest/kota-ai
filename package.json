@@ -1,7 +1,16 @@
 {
-  "name": "kota-ai",
+  "name": "@jayminwest/kota-ai",
   "version": "1.0.0",
+  "description": "Knowledge Oriented Thinking Assistant",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jayminwest/kota-ai.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jayminwest/kota-ai/issues"
+  },
+  "homepage": "https://github.com/jayminwest/kota-ai#readme",
   "bin": {
     "kota": "dist/cli.js"
   },
@@ -9,7 +18,9 @@
     ".": "./dist/index.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsc",
@@ -18,10 +29,16 @@
     "typecheck": "tsc --noEmit",
     "test": "echo \"Error: no test specified yet\" && exit 0"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "keywords": [
+    "ai",
+    "knowledge management",
+    "cli",
+    "local-first",
+    "mcp",
+    "typescript"
+  ],
+  "author": "jayminwest",
+  "license": "MIT",
   "devDependencies": {
     "@types/blessed": "^0.1.25",
     "@types/node": "^22.14.0",
