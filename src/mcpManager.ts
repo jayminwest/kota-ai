@@ -81,6 +81,13 @@ export class MCPManager {
         this.logStream?.write(`[MCP stderr] ${output}\n`);
       });
 
+      // Handle process error
+      this.mcpProcess.on('error', (err) => {
+        this.logStream?.write(`[MCP] Process error: ${err}\n`);
+        this.isConnected = false;
+        this.mcpProcess = null;
+      });
+
       // Handle process exit
       this.mcpProcess.on('close', (code) => {
         this.logStream?.write(`[MCP] Process exited with code ${code}\n`);
