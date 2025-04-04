@@ -1,0 +1,15 @@
+# Files Charlie should skip during reviews
+# Note: only include files not already in .gitignore
+ignorePatterns:
+  - '**/*.lock'
+  - '**/*.lock.json'
+  - '**/*.lockb'
+  - '**/.env'
+  # Add any other project-specific patterns Charlie should ignore
+
+# Commands Charlie can use to verify changes
+checkCommands:
+  fix: npm run format
+  lint: npm run lint
+  types: npm run typecheck
+  test: npm run test
