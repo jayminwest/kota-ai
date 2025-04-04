@@ -1,21 +1,10 @@
 # KOTA-AI Development Roadmap
 
-This document outlines the detailed development roadmap for the KOTA-AI npm package, providing a comprehensive plan for implementation from basic features to advanced capabilities.
+This document outlines the development roadmap for the KOTA-AI npm package, providing a plan for implementation from basic features to advanced capabilities, organized into logical phases.
 
-## 1. Project Timeline Overview
+## 1. Phase: Core Infrastructure
 
-The KOTA-AI development will follow a phased approach over approximately 12 weeks:
-
-| Phase | Timeline | Focus | Status |
-|-------|----------|-------|--------|
-| **Phase 1** | Weeks 1-3 | Core Infrastructure | Planning |
-| **Phase 2** | Weeks 4-6 | Knowledge Management | Not Started |
-| **Phase 3** | Weeks 7-9 | MCP Integration | Not Started |
-| **Phase 4** | Weeks 10-12 | Advanced Features | Not Started |
-
-## 2. Phase 1: Core Infrastructure (Weeks 1-3)
-
-### Week 1: Project Setup and Basic CLI
+### Project Setup and Basic CLI
 
 #### Milestone 1.1: Project Initialization
 - Set up TypeScript project structure
@@ -42,7 +31,7 @@ The KOTA-AI development will follow a phased approach over approximately 12 week
 - Initial test suite
 - Project documentation
 
-### Week 2: Storage System and Basic Commands
+### Storage System and Basic Commands
 
 #### Milestone 2.1: Storage System
 - Implement local storage architecture
@@ -69,7 +58,7 @@ The KOTA-AI development will follow a phased approach over approximately 12 week
 - Enhanced documentation
 - Expanded test coverage
 
-### Week 3: Knowledge Entry Management
+### Knowledge Entry Management
 
 #### Milestone 3.1: Knowledge Entry Creation
 - Implement `kota create` command
@@ -96,9 +85,9 @@ The KOTA-AI development will follow a phased approach over approximately 12 week
 - User documentation
 - Installation guide
 
-## 3. Phase 2: Knowledge Management (Weeks 4-6)
+## 2. Phase: Knowledge Management
 
-### Week 4: Search and Organization
+### Search and Organization
 
 #### Milestone 4.1: Search System
 - Implement `kota search` command
@@ -125,7 +114,7 @@ The KOTA-AI development will follow a phased approach over approximately 12 week
 - Enhanced documentation
 - Additional test coverage
 
-### Week 5: Knowledge Relationships
+### Knowledge Relationships
 
 #### Milestone 5.1: Link Management
 - Implement bidirectional linking
@@ -152,7 +141,7 @@ The KOTA-AI development will follow a phased approach over approximately 12 week
 - Updated documentation
 - Expanded test coverage
 
-### Week 6: Advanced Knowledge Features
+### Advanced Knowledge Features
 
 #### Milestone 6.1: Templates and Schemas
 - Implement template management
@@ -179,9 +168,9 @@ The KOTA-AI development will follow a phased approach over approximately 12 week
 - Enhanced documentation
 - Comprehensive test coverage for knowledge features
 
-## 4. Phase 3: MCP Integration (Weeks 7-9)
+## 3. Phase: MCP Integration
 
-### Week 7: MCP Client Implementation
+### MCP Client Implementation
 
 #### Milestone 7.1: MCP Connection
 - Implement `kota connect` command
@@ -208,7 +197,7 @@ The KOTA-AI development will follow a phased approach over approximately 12 week
 - MCP documentation
 - Connection testing
 
-### Week 8: Chat and Context Management
+### Chat and Context Management
 
 #### Milestone 8.1: Interactive Chat
 - Implement `kota chat` command
@@ -235,7 +224,7 @@ The KOTA-AI development will follow a phased approach over approximately 12 week
 - Updated documentation
 - MCP integration tests
 
-### Week 9: Advanced MCP Features
+### Advanced MCP Features
 
 #### Milestone 9.1: Model Optimization
 - Implement parameter tuning
@@ -262,9 +251,9 @@ The KOTA-AI development will follow a phased approach over approximately 12 week
 - Enhanced documentation
 - Comprehensive MCP test coverage
 
-## 5. Phase 4: Advanced Features (Weeks 10-12)
+## 4. Phase: Advanced Features
 
-### Week 10: Consciousness Framework
+### Consciousness Framework
 
 #### Milestone 10.1: Narrative Continuity
 - Implement narrative storage
@@ -291,7 +280,7 @@ The KOTA-AI development will follow a phased approach over approximately 12 week
 - Consciousness documentation
 - Framework testing
 
-### Week 11: Plugin System
+### Plugin System
 
 #### Milestone 11.1: Plugin Architecture
 - Implement `kota plugins` command
@@ -318,7 +307,7 @@ The KOTA-AI development will follow a phased approach over approximately 12 week
 - Plugin documentation
 - Plugin examples
 
-### Week 12: Visualization and Final Integration
+### Visualization and Final Integration
 
 #### Milestone 12.1: Knowledge Visualization
 - Implement `kota visualize` command
@@ -346,9 +335,9 @@ The KOTA-AI development will follow a phased approach over approximately 12 week
 - Example projects
 - Release-ready package
 
-## 6. Implementation Strategy
+## 5. Implementation Strategy
 
-### 6.1 Development Approach
+### 5.1 Development Approach
 
 The development will follow these principles:
 

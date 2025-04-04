@@ -591,18 +591,18 @@ Commands will be implemented in the following order:
 - `kota edit`
 - `kota delete`
 
-### Phase 2: Knowledge Management
+### Knowledge Management Commands
 - `kota search`
 - `kota export`
 - `kota import`
 - `kota backup create/restore`
 
-### Phase 3: MCP Integration
+### MCP Integration Commands
 - `kota connect`
 - `kota models`
 - `kota chat`
 
-### Phase 4: Advanced Features
+### Advanced Feature Commands
 - `kota consciousness`
 - `kota agency`
 - `kota visualize`

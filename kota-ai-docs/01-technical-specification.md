@@ -329,30 +329,32 @@ Implementation approach:
 - Enable synchronization between devices
 - Implement conflict resolution strategies
 
-## 7. Implementation Priorities
+## 7. Implementation Sequence
 
-1. **Phase 1: Core Infrastructure**
-   - Basic CLI command structure
-   - Local file storage for MDX
-   - Configuration management
-   - Logging and error handling
+Development will generally proceed in the following logical order:
 
-2. **Phase 2: Knowledge Management**
-   - MDX parsing and rendering
-   - Frontmatter handling
-   - Basic search functionality
-   - Knowledge entry CRUD operations
+1.  **Core Infrastructure**
+    *   Basic CLI command structure
+    *   Local file storage for MDX
+    *   Configuration management
+    *   Logging and error handling
 
-3. **Phase 3: MCP Integration**
-   - MCP client implementation
-   - Model selection and management
-   - Context handling
-   - Basic conversation capabilities
+2.  **Knowledge Management**
+    *   MDX parsing and rendering
+    *   Frontmatter handling
+    *   Basic search functionality
+    *   Knowledge entry CRUD operations
 
-4. **Phase 4: Advanced Features**
-   - Consciousness framework
-   - Rich terminal UI
-   - Knowledge visualization
-   - Plugin system
+3.  **MCP Integration**
+    *   MCP client implementation
+    *   Model selection and management
+    *   Context handling
+    *   Basic conversation capabilities
 
-This technical specification provides a comprehensive foundation for implementing the KOTA-AI npm package, focusing on architecture, data models, and core functionality. The implementation will follow the phased approach outlined in the project context document.
+4.  **Advanced Features & UX**
+    *   Consciousness framework
+    *   Rich terminal UI
+    *   Knowledge visualization
+    *   Plugin system
+
+This technical specification provides a comprehensive foundation for implementing the KOTA-AI npm package, focusing on architecture, data models, and core functionality. The implementation will follow the logical sequence outlined above and in related documentation.
