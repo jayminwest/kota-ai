@@ -576,11 +576,11 @@ Most commands support multiple output formats:
 
 Many commands support an interactive mode with the `--interactive, -i` flag, which will prompt for required information instead of requiring it as arguments.
 
-## 5. Command Implementation Priority
+## 5. Command Implementation Sequence
 
-Commands will be implemented in the following order:
+Commands will generally be implemented in a logical sequence, starting with core functionality and building towards more advanced features:
 
-### Phase 1: Essential Commands
+### Essential Commands (Foundation)
 - `kota init`
 - `kota config`
 - `kota status`

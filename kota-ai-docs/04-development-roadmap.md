@@ -361,31 +361,11 @@ The development will follow these principles:
    - Conduct regular code reviews
    - Address technical debt promptly
 
-### 6.2 Release Strategy
+### 5.2 Release Strategy
 
-The release strategy will follow semantic versioning:
+The release strategy will follow semantic versioning, with releases reflecting the implemented feature set rather than specific timelines. Early releases (e.g., 0.x.y) will focus on core functionality, gradually adding features and stabilizing the API towards a 1.0.0 release.
 
-1. **Alpha Releases (0.1.x)**:
-   - Basic functionality
-   - Core commands
-   - Early adopter testing
-
-2. **Beta Releases (0.2.x - 0.9.x)**:
-   - Incremental feature additions
-   - API stabilization
-   - Broader testing
-
-3. **Release Candidate (1.0.0-rc.x)**:
-   - Complete feature set
-   - Documentation finalization
-   - Final testing
-
-4. **Stable Release (1.0.0)**:
-   - Production-ready
-   - Complete documentation
-   - Comprehensive examples
-
-### 6.3 Milestone Tracking
+### 5.3 Milestone Tracking
 
 Progress will be tracked using:
 
@@ -404,7 +384,7 @@ Progress will be tracked using:
    - Changelog maintenance
    - Version documentation
 
-## 7. Technical Challenges and Mitigations
+## 6. Technical Challenges and Mitigations
 
 | Challenge | Risk Level | Mitigation Strategy |
 |-----------|------------|---------------------|
@@ -416,7 +396,7 @@ Progress will be tracked using:
 | **Cross-Platform Compatibility** | Medium | Use platform-agnostic libraries; test on multiple platforms; abstract platform-specific code |
 | **Dependency Management** | Low | Minimize dependencies; pin versions; regular security audits |
 
-## 8. Success Metrics
+## 7. Success Metrics
 
 The success of the KOTA-AI implementation will be measured by:
 
@@ -445,28 +425,28 @@ The success of the KOTA-AI implementation will be measured by:
    - Responsive commands (< 100ms for most operations)
    - Efficient with large knowledge bases
 
-## 9. Post-1.0 Roadmap
+## 8. Future Directions
 
-After the initial stable release, development will focus on:
+After achieving a stable core feature set, potential future development directions include:
 
-### 9.1 Enhanced Collaboration
+### 8.1 Enhanced Collaboration
 - Implement synchronization between instances
 - Create sharing mechanisms
 - Develop collaboration tools
 
-### 9.2 Advanced AI Integration
+### 8.2 Advanced AI Integration
 - Implement more sophisticated MCP features
 - Create AI-assisted knowledge organization
 - Develop automated knowledge generation
 
-### 9.3 Ecosystem Development
+### 8.3 Ecosystem Development
 - Create plugin marketplace
 - Develop additional visualization tools
 - Build integration with other knowledge systems
 
-### 9.4 Mobile Companion
+### 8.4 Mobile Companion
 - Develop mobile access strategy
 - Create companion applications
 - Build synchronization mechanisms
 
-This comprehensive roadmap provides a detailed plan for implementing the KOTA-AI npm package, from basic infrastructure to advanced features, with a focus on incremental development and quality.
+This roadmap provides a plan for implementing the KOTA-AI npm package, from basic infrastructure to advanced features, with a focus on incremental development and quality.
