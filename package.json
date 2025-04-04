@@ -40,6 +40,7 @@
   "author": "jayminwest",
   "license": "MIT",
   "devDependencies": {
+    "@types/blessed": "^0.1.25",
     "@types/node": "^22.14.0",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
@@ -47,5 +48,9 @@
     "eslint-config-prettier": "^9.1.0",
     "prettier": "^3.3.3",
     "typescript": "^5.8.2"
+  },
+  "dependencies": {
+    "blessed": "^0.1.81",
+    "commander": "^13.1.0"
   }
 }
