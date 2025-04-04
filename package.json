@@ -9,7 +9,6 @@
     "dist"
   ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
     "lint": "eslint 'src/**/*.ts'",
     "format": "prettier --write 'src/**/*.ts' '*.json' '*.md'",
