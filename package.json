@@ -10,14 +10,19 @@
   ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc"
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "cli": "node dist/cli.js"
   },
-  "keywords": [],
+  "keywords": ["mcp", "ai", "client"],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "KOTA AI - A client for Model Context Protocol",
   "devDependencies": {
     "@types/node": "^22.14.0",
     "typescript": "^5.8.2"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.8.0"
   }
 }
