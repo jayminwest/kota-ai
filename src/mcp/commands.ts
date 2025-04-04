@@ -5,7 +5,10 @@ import {
   MCPHttpConnection,
 } from '../types/mcp.js';
 import { MCPClient } from './client.js';
-import { ServerCapabilities, SupportedModel } from '@modelcontextprotocol/sdk';
+import {
+  ServerCapabilities,
+  SupportedModel,
+} from '@modelcontextprotocol/sdk/protocol';
 
 // Create a singleton instance of the MCP client
 const mcpClient = new MCPClient();
