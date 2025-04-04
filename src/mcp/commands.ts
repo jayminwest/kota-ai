@@ -5,10 +5,7 @@ import {
   MCPHttpConnection,
 } from '../types/mcp.js';
 import { MCPClient } from './client.js';
-import {
-  ServerCapabilities,
-  SupportedModel,
-} from '@modelcontextprotocol/sdk/shared';
+import { ServerCapabilities, SupportedModel } from './sdk-mock.js';
 
 // Create a singleton instance of the MCP client
 const mcpClient = new MCPClient();

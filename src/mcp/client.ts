@@ -1,10 +1,10 @@
-import { Client } from '@modelcontextprotocol/sdk/client';
 import {
+  Client,
   ClientTransport,
   StdioClientTransport,
-} from '@modelcontextprotocol/sdk/client/stdio';
-import { HttpClientTransport } from '@modelcontextprotocol/sdk/client/sse';
-import { ServerCapabilities } from '@modelcontextprotocol/sdk/shared';
+  HttpClientTransport,
+  ServerCapabilities,
+} from './sdk-mock.js';
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
