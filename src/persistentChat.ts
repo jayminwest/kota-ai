@@ -340,10 +340,10 @@ export class PersistentChatInterface {
           content += `{bold}[You] ${timeString}{/bold}\n${message.content}\n\n`;
           break;
         case 'assistant':
-          content += `{bold}{green}[KOTA AI] ${timeString}{/green}{/bold}\n${message.content}\n\n`;
+          content += `{bold}{green-fg}[KOTA AI] ${timeString}{/green-fg}{/bold}\n${message.content}\n\n`;
           break;
         case 'system':
-          content += `{bold}{yellow}[System] ${timeString}{/yellow}{/bold}\n${message.content}\n\n`;
+          content += `{bold}{yellow-fg}[System] ${timeString}{/yellow-fg}{/bold}\n${message.content}\n\n`;
           break;
       }
     }
