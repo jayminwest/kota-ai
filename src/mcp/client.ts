@@ -1,8 +1,10 @@
 import { Client } from '@modelcontextprotocol/sdk/client';
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/transport/stdio';
-import { HttpClientTransport } from '@modelcontextprotocol/sdk/transport/http';
-import { ServerCapabilities } from '@modelcontextprotocol/sdk/protocol';
-import { ClientTransport } from '@modelcontextprotocol/sdk/transport';
+import {
+  ClientTransport,
+  StdioClientTransport,
+} from '@modelcontextprotocol/sdk/client/stdio';
+import { HttpClientTransport } from '@modelcontextprotocol/sdk/client/sse';
+import { ServerCapabilities } from '@modelcontextprotocol/sdk/shared';
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';

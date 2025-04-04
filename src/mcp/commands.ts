@@ -8,7 +8,7 @@ import { MCPClient } from './client.js';
 import {
   ServerCapabilities,
   SupportedModel,
-} from '@modelcontextprotocol/sdk/protocol';
+} from '@modelcontextprotocol/sdk/shared';
 
 // Create a singleton instance of the MCP client
 const mcpClient = new MCPClient();
