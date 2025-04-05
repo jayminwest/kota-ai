@@ -2,6 +2,7 @@ import blessed from 'blessed';
 import { execCommand } from './commands.js';
 import { AnthropicService } from './anthropicService.js';
 import { MCPManager } from './mcpManager.js';
+import { loadChatConfig, ChatInterfaceConfig } from './config.js';
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 
@@ -36,8 +37,12 @@ export class PersistentChatInterface {
   private inputHistoryIndex: number = -1;
   private anthropicService: AnthropicService | null = null;
   private mcpManager: MCPManager = MCPManager.getInstance();
+  private config: ChatInterfaceConfig;
 
   constructor() {
+    // Load configuration
+    this.config = loadChatConfig();
+
     // Initialize the blessed screen
     this.screen = blessed.screen({
       smartCSR: true,
@@ -49,14 +54,14 @@ export class PersistentChatInterface {
       top: 0,
       left: 0,
       width: '100%',
-      height: '90%',
+      height: this.config.layout.chatBoxHeight,
       tags: true,
       scrollable: true,
       alwaysScroll: true,
       scrollbar: {
         ch: ' ',
         track: {
-          bg: 'gray',
+          bg: this.config.layout.scrollbarStyle.trackBg,
         },
         style: {
           inverse: true,
@@ -67,7 +72,7 @@ export class PersistentChatInterface {
       },
       style: {
         border: {
-          fg: 'blue',
+          fg: this.config.colors.border,
         },
       },
     });
@@ -77,14 +82,14 @@ export class PersistentChatInterface {
       bottom: 1,
       left: 0,
       width: '100%',
-      height: 3,
+      height: this.config.layout.inputBoxHeight,
       inputOnFocus: true,
       border: {
         type: 'line',
       },
       style: {
         border: {
-          fg: 'blue',
+          fg: this.config.colors.border,
         },
       },
     });
@@ -96,11 +101,10 @@ export class PersistentChatInterface {
       width: '100%',
       height: 1,
       tags: true,
-      content:
-        '{bold}KOTA AI{/bold} | Press Ctrl+C to exit | Enter to send | Up/Down for history',
+      content: this.config.labels.statusBar,
       style: {
-        fg: 'white',
-        bg: 'blue',
+        fg: this.config.colors.statusBar.foreground,
+        bg: this.config.colors.statusBar.background,
       },
     });
 
@@ -442,14 +446,13 @@ export class PersistentChatInterface {
 
       switch (message.sender) {
         case 'user':
-          content += `{bold}[You] ${timeString}{/bold}\n${message.content}\n\n`;
+          content += `{bold}{${this.config.colors.userMessage}-fg}[${this.config.labels.user}] ${timeString}{/${this.config.colors.userMessage}-fg}{/bold}\n${message.content}\n\n`;
           break;
         case 'assistant':
-          content += `{bold}{green-fg}[KOTA AI] ${timeString}{/green-fg}{/bold}\n${message.content}\n\n`;
+          content += `{bold}{${this.config.colors.assistantMessage}-fg}[${this.config.labels.assistant}] ${timeString}{/${this.config.colors.assistantMessage}-fg}{/bold}\n${message.content}\n\n`;
           break;
         case 'system':
-          // Revert to {yellow-fg} and remove {bold} to test
-          content += `{yellow-fg}[System] ${timeString}{/yellow-fg}\n${message.content}\n\n`;
+          content += `{bold}{${this.config.colors.systemMessage}-fg}[${this.config.labels.system}] ${timeString}{/${this.config.colors.systemMessage}-fg}{/bold}\n${message.content}\n\n`;
           break;
       }
     }
