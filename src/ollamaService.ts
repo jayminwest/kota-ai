@@ -27,13 +27,15 @@ export class OllamaService {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
-      
+
       const response = await fetch(`${this.baseUrl}/api/tags`, {
-        signal: controller.signal
+        signal: controller.signal,
       }).finally(() => clearTimeout(timeoutId));
-      
+
       if (!response.ok) {
-        throw new Error(`Failed to list models: ${response.status} ${response.statusText}`);
+        throw new Error(
+          `Failed to list models: ${response.status} ${response.statusText}`
+        );
       }
       const data = await response.json();
       return data.models || [];
@@ -41,12 +43,18 @@ export class OllamaService {
       // More specific error message based on error type
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
-          throw new Error(`Ollama API connection timed out. Is Ollama running at ${this.baseUrl}?`);
+          throw new Error(
+            `Ollama API connection timed out. Is Ollama running at ${this.baseUrl}?`
+          );
         }
         if (error.message.includes('fetch failed')) {
-          throw new Error(`Could not connect to Ollama at ${this.baseUrl}. Is the service running?`);
+          throw new Error(
+            `Could not connect to Ollama at ${this.baseUrl}. Is the service running?`
+          );
         }
-        throw new Error(`Error communicating with Ollama API: ${error.message}`);
+        throw new Error(
+          `Error communicating with Ollama API: ${error.message}`
+        );
       }
       throw new Error(`Error communicating with Ollama API: ${String(error)}`);
     }
@@ -74,18 +82,21 @@ export class OllamaService {
         body: JSON.stringify({
           model: modelName,
           messages: [
-            { 
-              role: 'system', 
-              content: 'You are KOTA, a Knowledge Oriented Thinking Assistant. You provide helpful, accurate, and concise answers.' 
+            {
+              role: 'system',
+              content:
+                'You are KOTA, a Knowledge Oriented Thinking Assistant. You provide helpful, accurate, and concise answers.',
             },
-            { role: 'user', content: message }
+            { role: 'user', content: message },
           ],
           stream: true,
         }),
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to chat: ${response.status} ${response.statusText}`);
+        throw new Error(
+          `Failed to chat: ${response.status} ${response.statusText}`
+        );
       }
 
       if (!response.body) {
@@ -95,20 +106,20 @@ export class OllamaService {
       // Read the stream response
       const reader = response.body.getReader();
       const decoder = new TextDecoder('utf-8');
-      
+
       let done = false;
       while (!done) {
         const { value, done: doneReading } = await reader.read();
         done = doneReading;
-        
+
         if (done) {
           break;
         }
-        
+
         const chunk = decoder.decode(value, { stream: true });
         // Parse the chunk as JSON
-        const lines = chunk.split('\n').filter(line => line.trim() !== '');
-        
+        const lines = chunk.split('\n').filter((line) => line.trim() !== '');
+
         for (const line of lines) {
           try {
             const data = JSON.parse(line);
@@ -123,7 +134,8 @@ export class OllamaService {
 
       onComplete();
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       throw new Error(`Error communicating with Ollama API: ${errorMessage}`);
     }
   }

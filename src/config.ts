@@ -56,7 +56,8 @@ export const DEFAULT_CHAT_CONFIG: ChatInterfaceConfig = {
     user: 'You',
     assistant: 'KOTA AI',
     system: 'System',
-    statusBar: '{bold}KOTA AI{/bold} | Press Ctrl+C to exit | Enter to send | Up/Down for history',
+    statusBar:
+      '{bold}KOTA AI{/bold} | Press Ctrl+C to exit | Enter to send | Up/Down for history',
   },
 };
 
@@ -105,15 +106,15 @@ export function getConfigFilePaths(): string[] {
  */
 export function loadChatConfig(): ChatInterfaceConfig {
   const configPaths = getConfigFilePaths();
-  
+
   for (const configPath of configPaths) {
     if (fs.existsSync(configPath)) {
       try {
         const fileContent = fs.readFileSync(configPath, 'utf8');
         const fileExt = path.extname(configPath).toLowerCase();
-        
+
         let loadedConfig: Partial<ChatInterfaceConfig>;
-        
+
         // Parse the file based on its extension
         if (fileExt === '.json') {
           loadedConfig = JSON.parse(fileContent);
@@ -123,7 +124,7 @@ export function loadChatConfig(): ChatInterfaceConfig {
           console.error(`Unsupported config file extension: ${fileExt}`);
           continue;
         }
-        
+
         // Merge with default config to ensure all values are present
         console.log(`Loaded chat configuration from ${configPath}`);
         return mergeWithDefault(loadedConfig);
@@ -132,7 +133,7 @@ export function loadChatConfig(): ChatInterfaceConfig {
       }
     }
   }
-  
+
   // If no config file is found or valid, use default config
   console.log('Using default chat configuration');
   return DEFAULT_CHAT_CONFIG;
@@ -141,17 +142,19 @@ export function loadChatConfig(): ChatInterfaceConfig {
 /**
  * Create a default configuration file if none exists
  */
-export function createDefaultConfigFile(format: 'yaml' | 'json' = 'yaml'): string {
+export function createDefaultConfigFile(
+  format: 'yaml' | 'json' = 'yaml'
+): string {
   ensureConfigDir();
   const configDir = getConfigDir();
   const fileName = format === 'yaml' ? 'chat-config.yaml' : 'chat-config.json';
   const filePath = path.join(configDir, fileName);
-  
+
   // Check if file already exists
   if (fs.existsSync(filePath)) {
     return filePath;
   }
-  
+
   try {
     let content: string;
     if (format === 'yaml') {
@@ -159,7 +162,7 @@ export function createDefaultConfigFile(format: 'yaml' | 'json' = 'yaml'): strin
     } else {
       content = JSON.stringify(DEFAULT_CHAT_CONFIG, null, 2);
     }
-    
+
     fs.writeFileSync(filePath, content, 'utf8');
     console.log(`Created default chat configuration at ${filePath}`);
     return filePath;
@@ -172,30 +175,50 @@ export function createDefaultConfigFile(format: 'yaml' | 'json' = 'yaml'): strin
 /**
  * Merge user configuration with the default configuration
  */
-function mergeWithDefault(userConfig: Partial<ChatInterfaceConfig>): ChatInterfaceConfig {
+function mergeWithDefault(
+  userConfig: Partial<ChatInterfaceConfig>
+): ChatInterfaceConfig {
   return {
     colors: {
       border: userConfig.colors?.border ?? DEFAULT_CHAT_CONFIG.colors.border,
-      userMessage: userConfig.colors?.userMessage ?? DEFAULT_CHAT_CONFIG.colors.userMessage,
-      assistantMessage: userConfig.colors?.assistantMessage ?? DEFAULT_CHAT_CONFIG.colors.assistantMessage,
-      systemMessage: userConfig.colors?.systemMessage ?? DEFAULT_CHAT_CONFIG.colors.systemMessage,
+      userMessage:
+        userConfig.colors?.userMessage ??
+        DEFAULT_CHAT_CONFIG.colors.userMessage,
+      assistantMessage:
+        userConfig.colors?.assistantMessage ??
+        DEFAULT_CHAT_CONFIG.colors.assistantMessage,
+      systemMessage:
+        userConfig.colors?.systemMessage ??
+        DEFAULT_CHAT_CONFIG.colors.systemMessage,
       statusBar: {
-        foreground: userConfig.colors?.statusBar?.foreground ?? DEFAULT_CHAT_CONFIG.colors.statusBar.foreground,
-        background: userConfig.colors?.statusBar?.background ?? DEFAULT_CHAT_CONFIG.colors.statusBar.background,
+        foreground:
+          userConfig.colors?.statusBar?.foreground ??
+          DEFAULT_CHAT_CONFIG.colors.statusBar.foreground,
+        background:
+          userConfig.colors?.statusBar?.background ??
+          DEFAULT_CHAT_CONFIG.colors.statusBar.background,
       },
     },
     layout: {
-      chatBoxHeight: userConfig.layout?.chatBoxHeight ?? DEFAULT_CHAT_CONFIG.layout.chatBoxHeight,
-      inputBoxHeight: userConfig.layout?.inputBoxHeight ?? DEFAULT_CHAT_CONFIG.layout.inputBoxHeight,
+      chatBoxHeight:
+        userConfig.layout?.chatBoxHeight ??
+        DEFAULT_CHAT_CONFIG.layout.chatBoxHeight,
+      inputBoxHeight:
+        userConfig.layout?.inputBoxHeight ??
+        DEFAULT_CHAT_CONFIG.layout.inputBoxHeight,
       scrollbarStyle: {
-        trackBg: userConfig.layout?.scrollbarStyle?.trackBg ?? DEFAULT_CHAT_CONFIG.layout.scrollbarStyle.trackBg,
+        trackBg:
+          userConfig.layout?.scrollbarStyle?.trackBg ??
+          DEFAULT_CHAT_CONFIG.layout.scrollbarStyle.trackBg,
       },
     },
     labels: {
       user: userConfig.labels?.user ?? DEFAULT_CHAT_CONFIG.labels.user,
-      assistant: userConfig.labels?.assistant ?? DEFAULT_CHAT_CONFIG.labels.assistant,
+      assistant:
+        userConfig.labels?.assistant ?? DEFAULT_CHAT_CONFIG.labels.assistant,
       system: userConfig.labels?.system ?? DEFAULT_CHAT_CONFIG.labels.system,
-      statusBar: userConfig.labels?.statusBar ?? DEFAULT_CHAT_CONFIG.labels.statusBar,
+      statusBar:
+        userConfig.labels?.statusBar ?? DEFAULT_CHAT_CONFIG.labels.statusBar,
     },
   };
 }

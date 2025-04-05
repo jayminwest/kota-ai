@@ -136,6 +136,104 @@ KOTA-AI is designed to work seamlessly with the Model Context Protocol (MCP), al
 - Share context between different AI applications
 - Maintain privacy while leveraging powerful models
 
+### MCP Server Import
+
+KOTA-AI supports importing multiple MCP server configurations at once from a JSON or YAML file. This makes it easy to set up your MCP environment quickly, especially when working with multiple tools or sharing configurations with other users.
+
+#### Usage
+
+```bash
+kota mcp import <file-path> [--force]
+```
+
+- `<file-path>`: Path to a JSON or YAML file containing MCP server configurations
+- `--force`: (Optional) Overwrite existing server configurations without prompting
+
+#### Configuration File Format
+
+##### JSON Format
+
+```json
+{
+  "servers": [
+    {
+      "name": "exa-search",
+      "displayName": "Exa Search",
+      "description": "Search the web with Exa",
+      "transportType": "http",
+      "connection": {
+        "url": "https://example.com/exa-mcp",
+        "apiKey": "YOUR_API_KEY"
+      },
+      "isDefault": true
+    },
+    {
+      "name": "local-tools",
+      "displayName": "Local Development Tools",
+      "description": "Local development tools",
+      "transportType": "stdio",
+      "connection": {
+        "command": "node",
+        "args": ["./local-mcp-server.js"]
+      }
+    }
+  ]
+}
+```
+
+##### YAML Format
+
+```yaml
+servers:
+  - name: exa-search
+    displayName: Exa Search
+    description: Search the web with Exa
+    transportType: http
+    connection:
+      url: https://example.com/exa-mcp
+      apiKey: YOUR_API_KEY
+    isDefault: true
+  - name: local-tools
+    displayName: Local Development Tools
+    description: Local development tools
+    transportType: stdio
+    connection:
+      command: node
+      args:
+        - ./local-mcp-server.js
+```
+
+#### Configuration Fields
+
+Each server configuration must include:
+
+- `name`: Unique identifier for the server
+- `transportType`: Either "stdio" or "http"
+- `connection`: Connection details object
+
+For HTTP transport:
+
+- `connection.url`: The URL of the MCP server
+
+For stdio transport:
+
+- `connection.command`: The command to execute
+
+Optional fields:
+
+- `displayName`: Human-friendly name for the server
+- `description`: Description of the server
+- `isDefault`: Whether this should be the default server
+- `connection.apiKey`: API key for HTTP servers
+- `connection.args`: Command-line arguments for stdio servers
+
+#### Examples
+
+Example configuration files are provided in the `examples/` directory:
+
+- `examples/mcp-servers.json`: JSON format example
+- `examples/mcp-servers.yaml`: YAML format example
+
 ## 🎨 UI Customization
 
 KOTA-AI's chat interface can be customized using configuration files in YAML or JSON format. You can:
