@@ -23,8 +23,8 @@ export interface ModelConfig {
  * Current active model configuration
  */
 let activeModel: ModelConfig = {
-  id: 'claude-3-sonnet-20240229',
-  name: 'Claude 3 Sonnet',
+  id: 'claude-3-7-sonnet-20250219',
+  name: 'Claude 3.7 Sonnet',
   provider: ModelProvider.ANTHROPIC,
   default: true,
 };
@@ -35,10 +35,15 @@ let hasCheckedEnvironment = false;
 // Default model configurations
 const defaultModels: ModelConfig[] = [
   {
+    id: 'claude-3-7-sonnet-20250219',
+    name: 'Claude 3.7 Sonnet',
+    provider: ModelProvider.ANTHROPIC,
+    default: true,
+  },
+  {
     id: 'claude-3-sonnet-20240229',
     name: 'Claude 3 Sonnet',
     provider: ModelProvider.ANTHROPIC,
-    default: true,
   },
   {
     id: 'claude-3-haiku-20240307',
