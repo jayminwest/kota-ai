@@ -14,8 +14,33 @@
   "bin": {
     "kota": "dist/cli.js"
   },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
-    ".": "./dist/index.js"
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./chatbot": {
+      "import": "./dist/chatbot/index.js",
+      "types": "./dist/chatbot/index.d.ts"
+    },
+    "./mcp": {
+      "import": "./dist/mcp/index.js",
+      "types": "./dist/mcp/index.d.ts"
+    },
+    "./ai": {
+      "import": "./dist/ai/index.js",
+      "types": "./dist/ai/index.d.ts"
+    },
+    "./utils": {
+      "import": "./dist/utils/index.js",
+      "types": "./dist/utils/index.d.ts"
+    },
+    "./types": {
+      "import": "./dist/types/index.js",
+      "types": "./dist/types/index.d.ts"
+    }
   },
   "files": [
     "dist",
@@ -24,6 +49,9 @@
   ],
   "scripts": {
     "build": "tsc",
+    "clean": "rimraf dist",
+    "prebuild": "npm run clean",
+    "prepare": "npm run build",
     "lint": "eslint 'src/**/*.ts'",
     "format": "prettier --write 'src/**/*.ts' '*.json' '*.md'",
     "typecheck": "tsc --noEmit",
@@ -35,6 +63,7 @@
     "cli",
     "local-first",
     "mcp",
+    "chatbot",
     "typescript"
   ],
   "author": "jayminwest",
@@ -47,6 +76,7 @@
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "prettier": "^3.3.3",
+    "rimraf": "^5.0.5",
     "typescript": "^5.8.2"
   },
   "dependencies": {

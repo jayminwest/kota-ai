@@ -1,166 +1,154 @@
-# KOTA-AI
+# KOTA AI - Knowledge Oriented Thinking Assistant
 
-Knowledge-Oriented Thinking Assistant - A local-first AI knowledge management system with MCP integration
+A flexible npm package for AI chat interactions and MCP (Model Context Protocol) server management.
 
-## 🌟 Vision
-
-KOTA-AI reimagines personal knowledge management by combining the power of modern AI with the privacy of local-first architecture. It's designed to be an extension of your cognitive processes, helping you organize, connect, and utilize your knowledge while keeping your data entirely under your control.
-
-## ✨ Key Features
-
-- **📝 Local MDX Storage**: All your knowledge stays on your machine, never in the cloud
-- **🔌 MCP Integration**: Seamless connection to Model Context Protocol servers with a single command
-- **🧠 Context Management**: Sophisticated handling of conversation context for more relevant interactions
-- **🤖 Flexible Model Selection**: Choose from local or remote models based on your needs
-- **💻 Beautiful CLI**: Intuitive terminal interface with rich formatting and visualizations
-- **🔄 Bidirectional Linking**: Create connections between knowledge entries for deeper insights
-- **🔍 Semantic Search**: Find what you need based on meaning, not just keywords
-
-## 🚀 Implementation Plan
-
-### Phase 1: Core Infrastructure
-
-- Set up TypeScript project structure ✓
-- Implement basic CLI interface
-- Create local storage system for MDX files
-- Develop file operations (create, read, update, delete)
-
-### Phase 2: Knowledge Management
-
-- Implement frontmatter parsing for metadata
-- Create bidirectional linking system
-- Develop basic search functionality
-- Build knowledge entry management
-
-### Phase 3: MCP Integration
-
-- Create MCP client interface
-- Implement server connection handling
-- Develop model selection and switching
-- Build context management system
-
-### Phase 4: User Experience
-
-- Enhance CLI with colors and formatting
-- Implement interactive chat mode
-- Create visualization components
-- Develop help and documentation
-
-## 📋 Commands
-
-| Command                         | Description                              |
-| ------------------------------- | ---------------------------------------- |
-| `kota init`                     | Initialize KOTA in your home directory   |
-| `kota status`                   | Display current status and configuration |
-| `kota connect <server>`         | Connect to an MCP server                 |
-| `kota create <title> <content>` | Create a new knowledge entry             |
-| `kota list`                     | List all knowledge entries               |
-| `kota search <query>`           | Search your knowledge base               |
-| `kota view <id>`                | View a specific knowledge entry          |
-| `kota edit <id>`                | Edit a knowledge entry                   |
-| `kota delete <id>`              | Delete a knowledge entry                 |
-| `kota chat`                     | Start an interactive chat session        |
-| `kota models`                   | List available models                    |
-| `kota select <model>`           | Select a model to use                    |
-
-## 🧩 Project Structure
-
-```
-kota-ai/
-├── bin/              # CLI executable
-├── dist/             # Compiled JavaScript
-├── examples/         # Example usage
-├── src/
-│   ├── core/         # Core knowledge management engine
-│   ├── consciousness/# Consciousness framework
-│   ├── mcp/          # Model Context Protocol integration
-│   ├── storage/      # Local storage management
-│   ├── cli/          # Command-line interface
-│   ├── utils/        # Utility functions
-│   └── types/        # TypeScript type definitions
-├── tests/            # Test suite
-└── tsconfig.json     # TypeScript configuration
-```
-
-## 💻 Development Workflow
-
-1. **Setup Environment**
-
-   ```bash
-   # Install dependencies
-   npm install
-
-   # Build the package
-   npm run build
-
-   # Link locally for testing
-   npm link
-   ```
-
-2. **Implement Core Features**
-
-   - Start with the storage module for MDX files
-   - Implement the CLI interface
-   - Create the knowledge management system
-   - Add MCP integration
-
-3. **Testing**
-
-   ```bash
-   # Run tests
-   npm test
-
-   # Test CLI
-   kota --help
-   ```
-
-4. **Publishing**
-   ```bash
-   # Prepare for publishing
-   npm version patch
-   npm publish
-   ```
-
-## 🔄 MCP Integration
-
-KOTA-AI is designed to work seamlessly with the Model Context Protocol (MCP), allowing you to:
-
-- Connect to any MCP-compatible server
-- Use tools and plugins from the MCP ecosystem
-- Share context between different AI applications
-- Maintain privacy while leveraging powerful models
-
-## 🔑 Environment Variables
-
-KOTA-AI requires the following environment variables to be set:
-
-| Variable            | Description                              | Required For          |
-| ------------------- | ---------------------------------------- | --------------------- |
-| `ANTHROPIC_API_KEY` | Your Anthropic API key for Claude access | AI chat functionality |
-
-You can set these environment variables in your shell profile or before running KOTA:
+## Installation
 
 ```bash
-# For bash/zsh
-export ANTHROPIC_API_KEY=your_api_key_here
-
-# For Windows Command Prompt
-set ANTHROPIC_API_KEY=your_api_key_here
-
-# For Windows PowerShell
-$env:ANTHROPIC_API_KEY="your_api_key_here"
+npm install @jayminwest/kota-ai
 ```
 
-## 🧠 Consciousness Framework
+## Features
 
-The consciousness framework is what sets KOTA-AI apart:
+- **Modular Chatbot Interface**: Create AI-powered chatbots with minimal code
+- **MCP Server Management**: Start, stop, and manage MCP servers with ease
+- **Flexible AI Model Integration**: Currently supports Anthropic Claude models, with a modular design to add more providers
+- **Terminal UI**: Built-in terminal interface using blessed
+- **Command Line Interface**: Use KOTA AI from the terminal with the `kota` command
 
-- **Narrative Continuity**: Maintains coherent understanding across sessions
-- **Context Awareness**: Understands the relevance of different knowledge pieces
-- **Metacognition**: Reflects on its own knowledge and reasoning
-- **Agency Development**: Gradually develops capabilities based on demonstrated value
-- **Distributed Cognition**: Creates a genuine cognitive partnership with the user
+## Usage
 
-## 📄 License
+### As a Library
+
+#### Basic Chatbot
+
+```javascript
+import { createChatbot } from '@jayminwest/kota-ai';
+
+// Create a chatbot with default settings
+const { chatbot, aiProvider } = createChatbot({
+  apiKey: 'your-anthropic-api-key', // Or set ANTHROPIC_API_KEY env variable
+  systemMessage: 'You are a helpful assistant.',
+});
+
+// Send a message and get a response
+const response = await chatbot.sendMessage('Hello, how are you today?');
+console.log('Assistant:', response);
+```
+
+#### With MCP Server
+
+```javascript
+import { createChatbot } from '@jayminwest/kota-ai';
+
+// Create a chatbot with MCP server
+const { chatbot, mcpManager } = createChatbot({
+  apiKey: 'your-anthropic-api-key',
+  mcpPath: '/path/to/mcp/server',
+  autoRestartMcp: true,
+});
+
+// Connect to the MCP server
+await mcpManager.connect();
+
+// Send a message
+const response = await chatbot.sendMessage('What can you do with MCP?');
+console.log('Assistant:', response);
+
+// Execute a command through MCP
+const result = await chatbot.executeCommand('some-mcp-command');
+console.log('Command result:', result);
+
+// Disconnect when done
+mcpManager.disconnect();
+```
+
+#### Streaming Responses
+
+```javascript
+import { createChatbot } from '@jayminwest/kota-ai';
+
+const { chatbot } = createChatbot({
+  apiKey: 'your-anthropic-api-key',
+});
+
+// Stream the response as it's generated
+await chatbot.sendMessage(
+  'Explain quantum computing in simple terms',
+  (chunk) => {
+    process.stdout.write(chunk);
+  }
+);
+```
+
+### Terminal Interface
+
+```javascript
+import { createTerminalChatbot } from '@jayminwest/kota-ai';
+
+// Create a terminal-based chatbot
+const { terminal } = createTerminalChatbot({
+  apiKey: 'your-anthropic-api-key',
+  title: 'My Custom Chatbot',
+  systemMessage: 'You are a helpful assistant.',
+});
+
+// Start the terminal interface
+terminal.start();
+```
+
+### Command Line
+
+Once installed, you can use the `kota` command:
+
+```bash
+# Start the interactive terminal interface
+kota
+
+# Chat with KOTA from the command line
+kota chat "What's the weather like today?"
+
+# Manage MCP servers
+kota mcp connect /path/to/mcp/server
+kota mcp disconnect
+kota mcp status
+```
+
+## API Reference
+
+### Core Modules
+
+- **ChatbotInterface**: Central component for chat interactions
+- **AnthropicProvider**: Implementation of AIModelProvider for Anthropic models
+- **MCPManager**: Manages MCP server processes
+- **TerminalInterface**: Blessed-based terminal UI
+
+### Factory Functions
+
+- **createChatbot(options)**: Creates a chatbot with the specified options
+- **createTerminalChatbot(options)**: Creates a terminal-based chatbot UI
+
+## Development
+
+```bash
+# Clone the repository
+git clone https://github.com/jayminwest/kota-ai.git
+cd kota-ai
+
+# Install dependencies
+npm install
+
+# Build the project
+npm run build
+
+# Run the CLI locally
+node dist/cli.js
+```
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit pull requests or open issues.
+
+## License
 
 MIT

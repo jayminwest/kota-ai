@@ -1,9 +1,7 @@
 /**
- * MCP (Model Context Protocol) client and command functionality
+ * MCP (Model Context Protocol) functionality
  */
 
-// Export everything from the client module
+export * from './mcpManager.js';
 export * from './client.js';
-
-// Export everything from the commands module
 export * from './commands.js';
