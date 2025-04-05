@@ -422,6 +422,8 @@ function validateImportConfig(data: any): { valid: boolean; error?: string } {
  * @param args - Command arguments, first argument is the file path, optional --force flag
  */
 export function importMCPServers(args: string[]): void {
+  // Use the singleton instance of MCPClient
+  // This was defined at the top of the file as: const mcpClient = new MCPClient();
   if (args.length < 1) {
     console.log('Usage: kota mcp import <file-path> [--force]');
     console.log('Supported file formats: JSON and YAML');
