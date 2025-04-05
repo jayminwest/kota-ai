@@ -89,16 +89,16 @@ export class PersistentChatInterface {
 
     // Key bindings
     this.screen.key(['C-c'], () => {
-      this.cleanupAndExit();
+      return this.cleanupAndExit();
     });
     
     // Add additional exit handlers
     process.on('SIGINT', () => {
-      this.cleanupAndExit();
+      return this.cleanupAndExit();
     });
     
     process.on('SIGTERM', () => {
-      this.cleanupAndExit();
+      return this.cleanupAndExit();
     });
 
     this.screen.key(['C-m'], () => {
@@ -127,11 +127,9 @@ export class PersistentChatInterface {
     // Destroy the screen to restore terminal
     this.screen.destroy();
     
-    // Exit with a small delay to ensure screen is properly destroyed
-    setTimeout(() => {
-      console.log('KOTA chat session ended.');
-      process.exit(0);
-    }, 100);
+    // Exit immediately
+    console.log('KOTA chat session ended.');
+    process.exit(0);
   }
 
   /**
