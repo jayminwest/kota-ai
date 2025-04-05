@@ -2,10 +2,7 @@ declare module 'js-yaml' {
   /**
    * Loads YAML from a string or file
    */
-  export function load(
-    input: string,
-    options?: LoadOptions
-  ): any;
+  export function load(input: string, options?: LoadOptions): any;
 
   /**
    * Loads YAML from a string or file, returning an array of documents
@@ -19,10 +16,7 @@ declare module 'js-yaml' {
   /**
    * Dumps a JavaScript object as a YAML string
    */
-  export function dump(
-    obj: any,
-    options?: DumpOptions
-  ): string;
+  export function dump(obj: any, options?: DumpOptions): string;
 
   /**
    * Options for loading YAML

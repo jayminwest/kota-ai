@@ -212,12 +212,15 @@ Each server configuration must include:
 - `connection`: Connection details object
 
 For HTTP transport:
+
 - `connection.url`: The URL of the MCP server
 
 For stdio transport:
+
 - `connection.command`: The command to execute
 
 Optional fields:
+
 - `displayName`: Human-friendly name for the server
 - `description`: Description of the server
 - `isDefault`: Whether this should be the default server
@@ -227,6 +230,7 @@ Optional fields:
 #### Examples
 
 Example configuration files are provided in the `examples/` directory:
+
 - `examples/mcp-servers.json`: JSON format example
 - `examples/mcp-servers.yaml`: YAML format example
 

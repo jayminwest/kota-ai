@@ -51,7 +51,7 @@ export class AnthropicService {
         'ANTHROPIC_API_KEY environment variable is not set. Please set it to use Anthropic models.'
       );
     }
-    
+
     try {
       const stream = await this.client.messages.create({
         model: 'claude-3-sonnet-20240229',
