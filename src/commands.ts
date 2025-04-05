@@ -3,6 +3,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { AnthropicService } from './anthropicService.js';
 import { MCPManager } from './mcpManager.js';
+import { MCPClient } from './mcp/client.js';
 import {
   connectMCPServer,
   disconnectMCPServer,
@@ -11,7 +12,7 @@ import {
   removeMCPServer,
   setDefaultMCPServer,
   showMCPStatus,
-  importMCPServers,
+  importMCPServers as importMCPServersFromFile,
 } from './mcp/commands.js';
 import {
   chatWithModel,
@@ -149,6 +150,25 @@ export async function execCommand(args: string[]): Promise<void> {
         console.error('Please provide a message to chat with the AI.');
         break;
       }
+      
+      // Try to connect to the default MCP server if not already connected
+      const mcpManager = MCPManager.getInstance();
+      if (!mcpManager.isConnectedToServer()) {
+        try {
+          // Get the default MCP server from the client
+          const mcpClient = new MCPClient();
+          const defaultServer = mcpClient.getDefaultServer();
+          
+          if (defaultServer) {
+            console.log(`Automatically connecting to MCP server: ${defaultServer.displayName || defaultServer.name}...`);
+            await mcpClient.connect();
+            console.log(`Connected to MCP server: ${defaultServer.displayName || defaultServer.name}`);
+          }
+        } catch (error) {
+          console.log(`Note: Could not auto-connect to default MCP server: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+      
       // Use the model-commands chatWithModel function
       await chatWithModel(commandArgs.join(' '));
       break;
@@ -266,7 +286,7 @@ async function handleMCPCommands(args: string[]): Promise<void> {
     }
 
     case 'import': {
-      await importMCPServers(subCommandArgs);
+      await importMCPServersFromFile(subCommandArgs);
       break;
     }
 
