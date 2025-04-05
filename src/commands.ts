@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { AnthropicService } from './anthropicService.js';
 import { MCPManager } from './mcpManager.js';
 import {
   connectMCPServer,
@@ -10,6 +11,7 @@ import {
   removeMCPServer,
   setDefaultMCPServer,
   showMCPStatus,
+  importMCPServers,
 } from './mcp/commands.js';
 import {
   chatWithModel,
@@ -82,6 +84,7 @@ function showHelp(): void {
   console.log(
     '  mcp status              Show the status of the current MCP connection'
   );
+  console.log('  mcp import <file-path>  Import MCP server configurations from file');
   console.log('\nModel Commands:');
   console.log('  model list              List available AI models');
   console.log('  model use <model-id>    Set the active AI model');
@@ -146,6 +149,7 @@ async function handleModelCommands(args: string[]): Promise<void> {
   }
 
   const subCommand = args[0];
+  const subCommandArgs = args.slice(1);
 
   switch (subCommand) {
     case 'list':
@@ -181,7 +185,7 @@ async function handleModelCommands(args: string[]): Promise<void> {
 async function handleMCPCommands(args: string[]): Promise<void> {
   if (args.length === 0) {
     console.error(
-      'Please specify an MCP command: connect, disconnect, list, add, remove, default, status'
+      'Please specify an MCP command: connect, disconnect, status, list, add, remove, default, import'
     );
     return;
   }
@@ -211,10 +215,12 @@ async function handleMCPCommands(args: string[]): Promise<void> {
     case 'status':
       showMCPStatus();
       break;
+    case 'import':
+      importMCPServers(mcpArgs);
+      break;
     default:
-      console.error(`Unknown MCP subcommand: ${subCommand}`);
-      console.log(
-        'Available MCP subcommands: connect, disconnect, list, add, remove, default, status'
+      console.error(
+        `Unknown MCP command: ${subCommand}. Valid options are: connect, disconnect, status, list, add, remove, default, import`
       );
   }
 }

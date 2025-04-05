@@ -1,0 +1,17 @@
+servers:
+  - name: exa-search-yaml
+    displayName: Exa Search (YAML)
+    description: Search the web with Exa (YAML example)
+    transportType: http
+    connection:
+      url: https://example.com/exa-mcp
+      apiKey: YOUR_API_KEY
+    isDefault: true
+  - name: local-tools-yaml
+    displayName: Local Development Tools (YAML)
+    description: Local development tools (YAML example)
+    transportType: stdio
+    connection:
+      command: node
+      args:
+        - ./local-mcp-server.js
