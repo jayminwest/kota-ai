@@ -70,7 +70,9 @@ function showHelp(): void {
   console.log('  mcp connect <path>      Connect to MCP server');
   console.log('  mcp disconnect          Disconnect from MCP server');
   console.log('  mcp status              Check MCP connection status');
-  console.log('  config create           Create a default chat configuration file');
+  console.log(
+    '  config create           Create a default chat configuration file'
+  );
   console.log('  help                    Show this help information');
   console.log('\nMCP Commands:');
   console.log('  mcp connect [name]      Connect to an MCP server');
@@ -84,12 +86,16 @@ function showHelp(): void {
   console.log(
     '  mcp status              Show the status of the current MCP connection'
   );
-  console.log('  mcp import <file-path>  Import MCP server configurations from file');
+  console.log(
+    '  mcp import <file-path>  Import MCP server configurations from file'
+  );
   console.log('\nModel Commands:');
   console.log('  model list              List available AI models');
   console.log('  model use <model-id>    Set the active AI model');
   console.log('\nConfig Commands:');
-  console.log('  config create [--format yaml|json]   Create a default chat configuration file');
+  console.log(
+    '  config create [--format yaml|json]   Create a default chat configuration file'
+  );
 }
 
 /**
@@ -142,9 +148,7 @@ export async function execCommand(args: string[]): Promise<void> {
  */
 async function handleModelCommands(args: string[]): Promise<void> {
   if (args.length === 0) {
-    console.error(
-      'Please specify a model command: list, use'
-    );
+    console.error('Please specify a model command: list, use');
     return;
   }
 
@@ -240,7 +244,7 @@ function handleConfigCommands(args: string[]): void {
   switch (subCommand) {
     case 'create': {
       let format: 'yaml' | 'json' = 'yaml'; // Default to YAML
-      
+
       // Check if format is specified
       if (args.includes('--format')) {
         const formatIndex = args.indexOf('--format');
@@ -253,7 +257,7 @@ function handleConfigCommands(args: string[]): void {
           }
         }
       }
-      
+
       try {
         const configPath = createDefaultConfigFile(format);
         console.log(`Created default chat configuration at: ${configPath}`);
@@ -264,6 +268,8 @@ function handleConfigCommands(args: string[]): void {
     }
 
     default:
-      console.error(`Unknown config command: ${subCommand}. Valid options are: create`);
+      console.error(
+        `Unknown config command: ${subCommand}. Valid options are: create`
+      );
   }
 }
