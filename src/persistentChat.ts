@@ -7,6 +7,8 @@ import {
   ModelConfig,
   getAvailableModels,
 } from './model-commands.js';
+import { MCPManager } from './mcpManager.js';
+import { loadChatConfig, ChatInterfaceConfig } from './config.js';
 
 export class PersistentChatInterface {
   private screen: blessed.Widgets.Screen;
@@ -16,8 +18,13 @@ export class PersistentChatInterface {
   private chatHistory: { role: 'user' | 'ai'; content: string }[] = [];
   private isProcessing = false;
   private availableModels: ModelConfig[] = [];
+  private mcpManager: MCPManager = MCPManager.getInstance();
+  private config: ChatInterfaceConfig;
 
   constructor() {
+    // Load configuration
+    this.config = loadChatConfig();
+
     // Initialize blessed screen
     this.screen = blessed.screen({
       smartCSR: true,
@@ -29,7 +36,7 @@ export class PersistentChatInterface {
       top: 0,
       left: 0,
       width: '100%',
-      height: '90%',
+      height: this.config.layout.chatBoxHeight || '90%',
       scrollable: true,
       alwaysScroll: true,
       tags: true,
@@ -38,7 +45,7 @@ export class PersistentChatInterface {
       },
       style: {
         border: {
-          fg: 'blue',
+          fg: this.config.colors.border || 'blue',
         },
       },
     });
@@ -48,13 +55,13 @@ export class PersistentChatInterface {
       bottom: 1,
       left: 0,
       width: '100%',
-      height: '10%',
+      height: this.config.layout.inputBoxHeight || '10%',
       border: {
         type: 'line',
       },
       style: {
         border: {
-          fg: 'blue',
+          fg: this.config.colors.border || 'blue',
         },
       },
       inputOnFocus: true,
@@ -69,8 +76,8 @@ export class PersistentChatInterface {
       content: ' Press Ctrl+C to exit, Ctrl+M to change model',
       tags: true,
       style: {
-        fg: 'white',
-        bg: 'blue',
+        fg: this.config.colors.statusBar.foreground || 'white',
+        bg: this.config.colors.statusBar.background || 'blue',
       },
     });
 
@@ -81,7 +88,7 @@ export class PersistentChatInterface {
 
     // Key bindings
     this.screen.key(['C-c'], () => {
-      return process.exit(0);
+      this.cleanupAndExit();
     });
 
     this.screen.key(['C-m'], () => {
@@ -98,6 +105,15 @@ export class PersistentChatInterface {
     // Welcome message
     this.addMessage('ai', 'Welcome to KOTA! How can I help you today?');
     this.updateStatus();
+  }
+
+  /**
+   * Clean up resources and exit
+   */
+  private cleanupAndExit(): void {
+    // Ensure MCP server is disconnected
+    this.mcpManager.disconnect();
+    process.exit(0);
   }
 
   /**
