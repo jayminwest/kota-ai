@@ -25,5 +25,17 @@ The current implementation in `src/persistentChat.ts` attempts to handle CTRL+C 
 
 2. Implement a more robust cleanup process that ensures the terminal is restored to its original state before exiting.
 
+3. Verify that the .gitignore file includes all automatically generated files:
+   - Check that all build artifacts in the `dist/` directory are properly ignored
+   - Ensure any log files generated during runtime are ignored
+   - Verify that any temporary files created during development are excluded
+
 ## Priority
 High - This is a critical usability issue that affects all users.
+
+## GitHub Issue Creation
+To create this issue on GitHub and assign it to Charlie, run:
+
+```bash
+gh issue create --title "Fix: Unable to Exit Chat Interface" --body "$(cat issues/008-chat-exit-problem.md)" --assignee "charlie-helps"
+```
