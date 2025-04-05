@@ -25,15 +25,30 @@ export class OllamaService {
    */
   public async listModels(): Promise<{ name: string }[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/tags`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+      
+      const response = await fetch(`${this.baseUrl}/api/tags`, {
+        signal: controller.signal
+      }).finally(() => clearTimeout(timeoutId));
+      
       if (!response.ok) {
         throw new Error(`Failed to list models: ${response.status} ${response.statusText}`);
       }
       const data = await response.json();
       return data.models || [];
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      throw new Error(`Error communicating with Ollama API: ${errorMessage}`);
+      // More specific error message based on error type
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          throw new Error(`Ollama API connection timed out. Is Ollama running at ${this.baseUrl}?`);
+        }
+        if (error.message.includes('fetch failed')) {
+          throw new Error(`Could not connect to Ollama at ${this.baseUrl}. Is the service running?`);
+        }
+        throw new Error(`Error communicating with Ollama API: ${error.message}`);
+      }
+      throw new Error(`Error communicating with Ollama API: ${String(error)}`);
     }
   }
 

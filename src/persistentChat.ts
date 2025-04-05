@@ -90,6 +90,15 @@ export class PersistentChatInterface {
     this.screen.key(['C-c'], () => {
       this.cleanupAndExit();
     });
+    
+    // Add additional exit handlers
+    process.on('SIGINT', () => {
+      this.cleanupAndExit();
+    });
+    
+    process.on('SIGTERM', () => {
+      this.cleanupAndExit();
+    });
 
     this.screen.key(['C-m'], () => {
       this.showModelSelection();
@@ -113,7 +122,15 @@ export class PersistentChatInterface {
   private cleanupAndExit(): void {
     // Ensure MCP server is disconnected
     this.mcpManager.disconnect();
-    process.exit(0);
+    
+    // Destroy the screen to restore terminal
+    this.screen.destroy();
+    
+    // Exit with a small delay to ensure screen is properly destroyed
+    setTimeout(() => {
+      console.log('KOTA chat session ended.');
+      process.exit(0);
+    }, 100);
   }
 
   /**
@@ -161,9 +178,14 @@ export class PersistentChatInterface {
    */
   private updateStatus(): void {
     const activeModel = getActiveModel();
-    this.statusBar.setContent(
-      ` Model: ${activeModel.name} | Press Ctrl+C to exit, Ctrl+M to change model`
-    );
+    let statusText = ` Model: ${activeModel.name} | Press Ctrl+C to exit, Ctrl+M to change model`;
+    
+    // Add warning if no API key is set
+    if (!process.env.ANTHROPIC_API_KEY && activeModel.provider === ModelProvider.ANTHROPIC) {
+      statusText = ` WARNING: No ANTHROPIC_API_KEY set | ${statusText}`;
+    }
+    
+    this.statusBar.setContent(statusText);
     this.screen.render();
   }
 

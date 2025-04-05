@@ -29,6 +29,9 @@ let activeModel: ModelConfig = {
   default: true,
 };
 
+// Flag to track if we've checked for API keys
+let hasCheckedEnvironment = false;
+
 // Default model configurations
 const defaultModels: ModelConfig[] = [
   {
@@ -55,15 +58,47 @@ const defaultModels: ModelConfig[] = [
 ];
 
 /**
+ * Check environment and adjust available models
+ */
+function checkEnvironmentAndAdjustModels(): void {
+  if (hasCheckedEnvironment) return;
+  
+  // Check for Anthropic API key
+  if (!process.env.ANTHROPIC_API_KEY) {
+    // If no Anthropic API key, switch default to Ollama if available
+    const ollamaDefault = defaultModels.find(m => m.provider === ModelProvider.OLLAMA);
+    if (ollamaDefault) {
+      ollamaDefault.default = true;
+      // Update active model to use Ollama
+      activeModel = ollamaDefault;
+      
+      // Remove default flag from Anthropic models
+      defaultModels.forEach(m => {
+        if (m.provider === ModelProvider.ANTHROPIC) {
+          m.default = false;
+        }
+      });
+    }
+  }
+  
+  hasCheckedEnvironment = true;
+}
+
+/**
  * Get all available models (both statically defined and dynamically from services)
  */
 export async function getAvailableModels(): Promise<ModelConfig[]> {
+  // Check environment variables and adjust models accordingly
+  checkEnvironmentAndAdjustModels();
+  
   const models = [...defaultModels];
+  let ollamaAvailable = false;
 
   try {
-    // Try to get Ollama models
+    // Try to get Ollama models with a timeout
     const ollamaService = OllamaService.getInstance();
     const ollamaModels = await ollamaService.listModels();
+    ollamaAvailable = true;
     
     // Only add Ollama models that aren't already in the default list
     for (const model of ollamaModels) {
@@ -78,6 +113,19 @@ export async function getAvailableModels(): Promise<ModelConfig[]> {
   } catch (error) {
     // Ignore errors from Ollama API, just use default models
     console.error('Warning: Failed to fetch Ollama models:', error);
+  }
+  
+  // If no API key for Anthropic and Ollama is not available, add a warning model
+  if (!process.env.ANTHROPIC_API_KEY && !ollamaAvailable) {
+    models.push({
+      id: 'no-models-available',
+      name: 'NO MODELS AVAILABLE - Set ANTHROPIC_API_KEY or start Ollama',
+      provider: ModelProvider.ANTHROPIC,
+      default: true
+    });
+    
+    // Update active model to show the warning
+    activeModel = models[models.length - 1];
   }
 
   return models;
@@ -142,6 +190,15 @@ export async function chatWithModel(
   onComplete?: () => void
 ): Promise<void> {
   try {
+    // Check if this is the warning model
+    if (modelConfig.id === 'no-models-available') {
+      const errorMessage = 'No AI models are available. Please set ANTHROPIC_API_KEY environment variable or start Ollama service.';
+      console.error(errorMessage);
+      if (onChunk) onChunk(errorMessage);
+      if (onComplete) onComplete();
+      return;
+    }
+    
     console.log('AI: Thinking...');
     let responseAccumulator = '';
     
@@ -159,13 +216,25 @@ export async function chatWithModel(
     
     switch (modelConfig.provider) {
       case ModelProvider.ANTHROPIC: {
+        if (!process.env.ANTHROPIC_API_KEY) {
+          const errorMessage = 'ANTHROPIC_API_KEY environment variable is not set. Please set it to use Anthropic models.';
+          chunkHandler(errorMessage);
+          completeHandler();
+          return;
+        }
         const anthropicService = AnthropicService.getInstance();
         await anthropicService.chatWithAI(message, chunkHandler, completeHandler);
         break;
       }
       case ModelProvider.OLLAMA: {
         const ollamaService = OllamaService.getInstance();
-        await ollamaService.chatWithModel(modelConfig.id, message, chunkHandler, completeHandler);
+        try {
+          await ollamaService.chatWithModel(modelConfig.id, message, chunkHandler, completeHandler);
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          chunkHandler(`Error: ${errorMessage}`);
+          completeHandler();
+        }
         break;
       }
       default:
@@ -173,5 +242,8 @@ export async function chatWithModel(
     }
   } catch (error) {
     console.error('Error communicating with AI:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (onChunk) onChunk(`Error: ${errorMessage}`);
+    if (onComplete) onComplete();
   }
 }
