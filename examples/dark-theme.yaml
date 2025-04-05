@@ -1,0 +1,21 @@
+# KOTA AI Dark Theme Configuration
+colors:
+  border: white
+  userMessage: cyan
+  assistantMessage: green
+  systemMessage: yellow
+  statusBar:
+    foreground: black
+    background: white
+
+layout:
+  chatBoxHeight: '90%'
+  inputBoxHeight: 3
+  scrollbarStyle:
+    trackBg: gray
+
+labels:
+  user: User
+  assistant: KOTA
+  system: System
+  statusBar: "{black-fg}{bold}KOTA AI{/bold} | CTRL+C: Exit | ENTER: Send | UP/DOWN: History{/black-fg}"

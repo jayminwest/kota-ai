@@ -1,0 +1,29 @@
+# KOTA AI Chat Interface Configuration (YAML format)
+colors:
+  # Border colors for UI elements
+  border: blue
+  # Message header colors
+  userMessage: white
+  assistantMessage: green
+  systemMessage: yellow
+  # Status bar colors
+  statusBar:
+    foreground: white
+    background: blue
+
+layout:
+  # Chat box takes 90% of the screen height
+  chatBoxHeight: '90%'
+  # Input box is 3 lines tall
+  inputBoxHeight: 3
+  # Scrollbar styling
+  scrollbarStyle:
+    trackBg: gray
+
+labels:
+  # Labels for different message types
+  user: You
+  assistant: KOTA AI
+  system: System
+  # Status bar content (supports blessed tags)
+  statusBar: "{bold}KOTA AI{/bold} | Press Ctrl+C to exit | Enter to send | Up/Down for history"

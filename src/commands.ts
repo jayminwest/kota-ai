@@ -12,6 +12,7 @@ import {
   setDefaultMCPServer,
   showMCPStatus,
 } from './mcp/commands.js';
+import { createDefaultConfigFile } from './config.js';
 
 const KOTA_DIR_NAME = '.kota-ai';
 const NOTES_DIR_NAME = 'notes';
@@ -85,22 +86,22 @@ function showHelp(): void {
   console.log('  mcp connect <path>      Connect to MCP server');
   console.log('  mcp disconnect          Disconnect from MCP server');
   console.log('  mcp status              Check MCP connection status');
+  console.log('  config create           Create a default chat configuration file');
   console.log('  help                    Show this help information');
-  console.log('  init           Initialize KOTA directories');
-  console.log('  chat <message> Chat with KOTA AI');
-  console.log('  help           Show this help information');
   console.log('\nMCP Commands:');
   console.log('  mcp connect [name]      Connect to an MCP server');
   console.log(
     '  mcp disconnect          Disconnect from the current MCP server'
   );
   console.log('  mcp list                List available MCP servers');
-  console.log('  mcp add <name> <type>   Add a new MCP server configuration');
-  console.log('  mcp remove <name>       Remove an MCP server configuration');
-  console.log('  mcp default <name>      Set the default MCP server');
+  console.log('  mcp add <n> <type>   Add a new MCP server configuration');
+  console.log('  mcp remove <n>       Remove an MCP server configuration');
+  console.log('  mcp default <n>      Set the default MCP server');
   console.log(
     '  mcp status              Show the status of the current MCP connection'
   );
+  console.log('\nConfig Commands:');
+  console.log('  config create [--format yaml|json]   Create a default chat configuration file');
 }
 
 /**
@@ -131,49 +132,11 @@ export async function execCommand(args: string[]): Promise<void> {
     case 'mcp':
       await handleMCPCommands(commandArgs);
       break;
+    case 'config':
+      handleConfigCommands(commandArgs);
+      break;
     case 'help':
       showHelp();
-      break;
-    case 'mcp':
-      if (commandArgs.length === 0) {
-        console.error('Please provide an MCP subcommand.');
-        console.log(
-          'Available MCP subcommands: connect, disconnect, list, add, remove, default, status'
-        );
-        break;
-      }
-
-      const mcpSubcommand = commandArgs[0];
-      const mcpArgs = commandArgs.slice(1);
-
-      switch (mcpSubcommand) {
-        case 'connect':
-          await connectMCPServer(mcpArgs);
-          break;
-        case 'disconnect':
-          await disconnectMCPServer();
-          break;
-        case 'list':
-          listMCPServers();
-          break;
-        case 'add':
-          addMCPServer(mcpArgs);
-          break;
-        case 'remove':
-          removeMCPServer(mcpArgs);
-          break;
-        case 'default':
-          setDefaultMCPServer(mcpArgs);
-          break;
-        case 'status':
-          showMCPStatus();
-          break;
-        default:
-          console.error(`Unknown MCP subcommand: ${mcpSubcommand}`);
-          console.log(
-            'Available MCP subcommands: connect, disconnect, list, add, remove, default, status'
-          );
-      }
       break;
     default:
       console.error(`Unknown command: ${command}`);
@@ -233,5 +196,48 @@ async function handleMCPCommands(args: string[]): Promise<void> {
       console.error(
         `Unknown MCP command: ${subCommand}. Valid options are: connect, disconnect, status`
       );
+  }
+}
+
+/**
+ * Handle configuration-related commands
+ * @param args Command arguments
+ */
+function handleConfigCommands(args: string[]): void {
+  if (args.length === 0) {
+    console.error('Please specify a config command: create');
+    return;
+  }
+
+  const subCommand = args[0];
+
+  switch (subCommand) {
+    case 'create': {
+      let format: 'yaml' | 'json' = 'yaml'; // Default to YAML
+      
+      // Check if format is specified
+      if (args.includes('--format')) {
+        const formatIndex = args.indexOf('--format');
+        if (formatIndex + 1 < args.length) {
+          const specifiedFormat = args[formatIndex + 1].toLowerCase();
+          if (specifiedFormat === 'json') {
+            format = 'json';
+          } else if (specifiedFormat !== 'yaml') {
+            console.error('Invalid format specified. Using default (yaml).');
+          }
+        }
+      }
+      
+      try {
+        const configPath = createDefaultConfigFile(format);
+        console.log(`Created default chat configuration at: ${configPath}`);
+      } catch (error) {
+        console.error('Failed to create configuration file:', error);
+      }
+      break;
+    }
+
+    default:
+      console.error(`Unknown config command: ${subCommand}. Valid options are: create`);
   }
 }

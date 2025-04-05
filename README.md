@@ -15,6 +15,7 @@ KOTA-AI reimagines personal knowledge management by combining the power of moder
 - **💻 Beautiful CLI**: Intuitive terminal interface with rich formatting and visualizations
 - **🔄 Bidirectional Linking**: Create connections between knowledge entries for deeper insights
 - **🔍 Semantic Search**: Find what you need based on meaning, not just keywords
+- **🎨 Customizable UI**: Configure the chat interface appearance with YAML or JSON configuration files
 
 ## 🚀 Implementation Plan
 
@@ -45,6 +46,7 @@ KOTA-AI reimagines personal knowledge management by combining the power of moder
 - Implement interactive chat mode
 - Create visualization components
 - Develop help and documentation
+- Implement configurable UI styling ✓
 
 ## 📋 Commands
 
@@ -62,6 +64,7 @@ KOTA-AI reimagines personal knowledge management by combining the power of moder
 | `kota chat`                     | Start an interactive chat session        |
 | `kota models`                   | List available models                    |
 | `kota select <model>`           | Select a model to use                    |
+| `kota config create`            | Create a default configuration file      |
 
 ## 🧩 Project Structure
 
@@ -129,6 +132,17 @@ KOTA-AI is designed to work seamlessly with the Model Context Protocol (MCP), al
 - Use tools and plugins from the MCP ecosystem
 - Share context between different AI applications
 - Maintain privacy while leveraging powerful models
+
+## 🎨 UI Customization
+
+KOTA-AI's chat interface can be customized using configuration files in YAML or JSON format. You can:
+
+- Change colors for different message types
+- Adjust layout dimensions
+- Customize labels and text
+- Create different themes for different use cases
+
+For detailed configuration options, see [Chat Configuration Documentation](kota-ai-docs/chat-configuration.md).
 
 ## 🔑 Environment Variables
 
