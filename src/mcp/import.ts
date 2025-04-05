@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import readline from 'node:readline';
 import { MCPClient } from './client.js';
 import { MCPServerConfig, MCPTransportType } from '../types/mcp.js';
 
