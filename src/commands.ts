@@ -61,42 +61,69 @@ function initializeKota(): void {
 }
 
 function showHelp(): void {
-  console.log('Usage: kota <command>');
-  console.log('\nAvailable commands:');
-  console.log('  init                    Initialize KOTA directories');
-  console.log('  chat <message>          Chat with KOTA AI');
-  console.log('  model list              List available AI models');
-  console.log('  model use <model-id>    Set the active AI model');
-  console.log('  mcp connect <path>      Connect to MCP server');
-  console.log('  mcp disconnect          Disconnect from MCP server');
-  console.log('  mcp status              Check MCP connection status');
-  console.log(
-    '  config create           Create a default chat configuration file'
-  );
-  console.log('  help                    Show this help information');
-  console.log('\nMCP Commands:');
-  console.log('  mcp connect [name]      Connect to an MCP server');
-  console.log(
-    '  mcp disconnect          Disconnect from the current MCP server'
-  );
-  console.log('  mcp list                List available MCP servers');
-  console.log('  mcp add <name> <type>   Add a new MCP server configuration');
-  console.log('  mcp remove <name>       Remove an MCP server configuration');
-  console.log('  mcp default <name>      Set the default MCP server');
-  console.log('  mcp import <file-path>  Import MCP servers from a JSON file');
-  console.log(
-    '  mcp status              Show the status of the current MCP connection'
-  );
-  console.log(
-    '  mcp import <file-path>  Import MCP server configurations from file'
-  );
-  console.log('\nModel Commands:');
-  console.log('  model list              List available AI models');
-  console.log('  model use <model-id>    Set the active AI model');
-  console.log('\nConfig Commands:');
-  console.log(
-    '  config create [--format yaml|json]   Create a default chat configuration file'
-  );
+  console.log('╭─────────────────────────────────────────────────────────╮');
+  console.log('│                  KOTA - Command Help                    │');
+  console.log('│        Knowledge Oriented Thinking Assistant            │');
+  console.log('╰─────────────────────────────────────────────────────────╯');
+  console.log('\nUsage: kota <command> [options]');
+  
+  // Basic Commands
+  console.log('\n🔹 BASIC COMMANDS:');
+  console.log('  init                     Initialize KOTA directories');
+  console.log('  chat <message>           Start a chat with KOTA AI');
+  console.log('  help                     Show this help information');
+  
+  // Model Commands
+  console.log('\n🔹 MODEL COMMANDS:');
+  console.log('  model list               List all available AI models');
+  console.log('  model use <model-id>     Set the active AI model');
+  console.log('    Example: kota model use claude-3-sonnet-20240229');
+  console.log('    Example: kota model use llama3:latest');
+  
+  // Config Commands
+  console.log('\n🔹 CONFIGURATION COMMANDS:');
+  console.log('  config create [--format yaml|json]   Create a default chat configuration file');
+  console.log('    Example: kota config create --format json');
+  
+  // MCP Commands
+  console.log('\n🔹 MCP (MODEL CONTEXT PROTOCOL) COMMANDS:');
+  console.log('  mcp connect [name]       Connect to an MCP server by name');
+  console.log('    Example: kota mcp connect my-server');
+  console.log('    Note: If no name is provided, connects to the default server');
+  
+  console.log('  mcp disconnect           Disconnect from the current MCP server');
+  
+  console.log('  mcp status               Show the status of the current MCP connection');
+  console.log('    Note: Displays server info and capabilities when connected');
+  
+  console.log('  mcp list                 List all configured MCP servers');
+  
+  console.log('  mcp add <name> <type> [options]  Add a new MCP server configuration');
+  console.log('    Types: stdio, http');
+  console.log('    Options for stdio: --command=<cmd> [--args=<comma-separated-args>]');
+  console.log('    Options for http: --url=<url> [--api-key=<api-key>]');
+  console.log('    Common options: [--display-name=<name>] [--desc=<description>] [--default]');
+  console.log('    Example: kota mcp add local-server stdio --command=path/to/server --default');
+  console.log('    Example: kota mcp add cloud-api http --url=https://api.example.com --api-key=xyz');
+  
+  console.log('  mcp remove <name>        Remove an MCP server configuration');
+  console.log('    Example: kota mcp remove my-server');
+  
+  console.log('  mcp default <name>       Set the default MCP server');
+  console.log('    Example: kota mcp default my-server');
+  
+  console.log('  mcp import <file-path> [--force]  Import MCP server configs from file');
+  console.log('    Supported formats: JSON and YAML');
+  console.log('    Example: kota mcp import ./servers.json');
+  console.log('    Example: kota mcp import ./servers.yaml --force');
+  
+  // Tips and help
+  console.log('\n🔹 TIPS:');
+  console.log('  • Use the persistent chat interface for a better experience:');
+  console.log('    $ kota chat');
+  console.log('  • Models can be changed within the persistent chat using Ctrl+M');
+  console.log('  • Set your ANTHROPIC_API_KEY environment variable to use Claude models');
+  console.log('  • MCP servers allow KOTA to utilize external context');
 }
 
 /**
@@ -163,7 +190,7 @@ async function handleModelCommands(args: string[]): Promise<void> {
     case 'use':
       if (args.length < 2) {
         console.error('Please provide a model ID');
-        console.log('Use "kota model list" to see available models');
+        console.log('Use \"kota model list\" to see available models');
         return;
       }
 
@@ -172,8 +199,8 @@ async function handleModelCommands(args: string[]): Promise<void> {
         const model = getActiveModel();
         console.log(`Active model set to ${model.id} (${model.name})`);
       } else {
-        console.error(`Model with ID "${modelId}" not found`);
-        console.log('Use "kota model list" to see available models');
+        console.error(`Model with ID \"${modelId}\" not found`);
+        console.log('Use \"kota model list\" to see available models');
       }
       break;
     default:

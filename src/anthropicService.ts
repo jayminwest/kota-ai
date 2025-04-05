@@ -39,11 +39,13 @@ export class AnthropicService {
    * @param message User message
    * @param onChunk Callback for each text chunk received from the API
    * @param onComplete Callback when the streaming is complete
+   * @param model Optional model to use (defaults to Claude 3.7 Sonnet)
    */
   public async chatWithAI(
     message: string,
     onChunk: (chunk: string) => void,
-    onComplete: () => void
+    onComplete: () => void,
+    model: string = 'claude-3-7-sonnet-20250219'
   ): Promise<void> {
     // Check if API key is available
     if (this.client.apiKey === 'dummy_key_anthropic_unavailable') {
@@ -54,7 +56,7 @@ export class AnthropicService {
 
     try {
       const stream = await this.client.messages.create({
-        model: 'claude-3-7-sonnet-20250219',
+        model: model,
         max_tokens: 1000,
         temperature: 0.7,
         system:
