@@ -15,6 +15,7 @@ KOTA-AI reimagines personal knowledge management by combining the power of moder
 - **💻 Beautiful CLI**: Intuitive terminal interface with rich formatting and visualizations
 - **🔄 Bidirectional Linking**: Create connections between knowledge entries for deeper insights
 - **🔍 Semantic Search**: Find what you need based on meaning, not just keywords
+- **🎨 Customizable Interface**: Configure colors, styles, and layout of the chat interface
 
 ## 🚀 Implementation Plan
 
@@ -42,9 +43,10 @@ KOTA-AI reimagines personal knowledge management by combining the power of moder
 ### Phase 4: User Experience
 
 - Enhance CLI with colors and formatting
-- Implement interactive chat mode
+- Implement interactive chat mode ✓
 - Create visualization components
 - Develop help and documentation
+- Implement configurable chat interface ✓
 
 ## 📋 Commands
 
@@ -70,6 +72,8 @@ kota-ai/
 ├── bin/              # CLI executable
 ├── dist/             # Compiled JavaScript
 ├── examples/         # Example usage
+├── config/           # Configuration files
+├── .kota-ai/         # Local configuration and data
 ├── src/
 │   ├── core/         # Core knowledge management engine
 │   ├── consciousness/# Consciousness framework
@@ -129,6 +133,20 @@ KOTA-AI is designed to work seamlessly with the Model Context Protocol (MCP), al
 - Use tools and plugins from the MCP ecosystem
 - Share context between different AI applications
 - Maintain privacy while leveraging powerful models
+
+## 🎨 Configuration
+
+KOTA-AI supports configuration files that allow you to customize various aspects of the application:
+
+### Chat Interface
+
+The chat interface can be customized using a YAML or JSON configuration file. Place your configuration in one of these locations:
+
+- `.kota-ai/chat.yaml` or `.kota-ai/chat.json` in your project directory
+- `config/chat.yaml` or `config/chat.json` in your project directory
+- `~/.kota-ai/chat.yaml` or `~/.kota-ai/chat.json` in your home directory
+
+You can customize colors, borders, layouts, and more. See [Chat Configuration Documentation](./kota-ai-docs/chat-configuration.md) for details.
 
 ## 🔑 Environment Variables
 

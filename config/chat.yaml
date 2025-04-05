@@ -1,0 +1,47 @@
+# Kota AI Chat Interface Configuration
+
+# Border settings
+borders:
+  chatBox:
+    type: "line"  # Options: line, bg, ascii, double
+    color: "blue"
+  inputBox:
+    type: "line"
+    color: "blue"
+
+# Colors for different message types
+colors:
+  user:
+    name: "white"  # Color for the user name/header
+    text: "white"  # Color for the user messages
+  assistant:
+    name: "green"
+    text: "white"
+  system:
+    name: "yellow"
+    text: "white"
+  statusBar:
+    foreground: "white"
+    background: "blue"
+
+# Scrollbar settings
+scrollbar:
+  track:
+    character: " "
+    backgroundColor: "gray"
+  style:
+    inverse: true
+
+# Text formatting
+formatting:
+  timestampFormat: "HH:mm:ss"  # Time format for message timestamps
+  userPrefix: "[You]"
+  assistantPrefix: "[KOTA AI]"
+  systemPrefix: "[System]"
+
+# Other UI settings
+ui:
+  chatBoxHeight: "90%"  # Percentage of screen height
+  inputBoxHeight: 3     # Number of lines
+  title: "KOTA AI Chat Interface"
+  statusBarText: "{bold}KOTA AI{/bold} | Press Ctrl+C to exit | Enter to send | Up/Down for history"

@@ -1,0 +1,51 @@
+{
+  "borders": {
+    "chatBox": {
+      "type": "line",
+      "color": "blue"
+    },
+    "inputBox": {
+      "type": "line",
+      "color": "blue"
+    }
+  },
+  "colors": {
+    "user": {
+      "name": "white",
+      "text": "white"
+    },
+    "assistant": {
+      "name": "green",
+      "text": "white"
+    },
+    "system": {
+      "name": "yellow",
+      "text": "white"
+    },
+    "statusBar": {
+      "foreground": "white",
+      "background": "blue"
+    }
+  },
+  "scrollbar": {
+    "track": {
+      "character": " ",
+      "backgroundColor": "gray"
+    },
+    "style": {
+      "inverse": true
+    }
+  },
+  "formatting": {
+    "timestampFormat": "HH:mm:ss",
+    "userPrefix": "[You]",
+    "assistantPrefix": "[KOTA AI]",
+    "systemPrefix": "[System]"
+  },
+  "ui": {
+    "chatBoxHeight": "90%",
+    "inputBoxHeight": 3,
+    "title": "KOTA AI Chat Interface",
+    "statusBarText": "{bold}KOTA AI{/bold} | Press Ctrl+C to exit | Enter to send | Up/Down for history"
+  }
+}
