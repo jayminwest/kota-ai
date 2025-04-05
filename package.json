@@ -27,7 +27,15 @@
     "lint": "eslint 'src/**/*.ts'",
     "format": "prettier --write 'src/**/*.ts' '*.json' '*.md'",
     "typecheck": "tsc --noEmit",
-    "test": "echo \"Error: no test specified yet\" && exit 0"
+    "typecheck:all": "tsc --project tsconfig.test.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
+    "test:unit": "vitest run test/unit/",
+    "test:integration": "vitest run test/integration/",
+    "test:e2e": "vitest run test/e2e/",
+    "prepare-test": "npm run build && mkdir -p test-reports"
   },
   "keywords": [
     "ai",
@@ -41,13 +49,18 @@
   "license": "MIT",
   "devDependencies": {
     "@types/blessed": "^0.1.25",
+    "@types/jsdom": "^21.1.6",
     "@types/node": "^22.14.0",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
+    "@vitest/coverage-v8": "^1.2.1",
+    "@vitest/ui": "^3.1.1",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
+    "jsdom": "^24.0.0",
     "prettier": "^3.3.3",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "vitest": "^3.1.1"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

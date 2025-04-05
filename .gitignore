@@ -32,3 +32,9 @@ Thumbs.db
 
 # Aider specific files (keep this if you use Aider)
 .aider*
+
+# Test related files
+coverage/
+test-reports/
+test-temp/
+.nyc_output/
