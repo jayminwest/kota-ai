@@ -32,3 +32,4 @@ Thumbs.db
 
 # Aider specific files (keep this if you use Aider)
 .aider*
+.env
