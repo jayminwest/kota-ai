@@ -21,6 +21,7 @@ export class PersistentChatInterface {
   private availableModels: ModelConfig[] = [];
   private mcpManager: MCPManager = MCPManager.getInstance();
   private config: ChatInterfaceConfig;
+  private exitConfirmationBox: blessed.Widgets.BoxElement | null = null;
 
   constructor() {
     // Load configuration
@@ -74,7 +75,8 @@ export class PersistentChatInterface {
       left: 0,
       width: '100%',
       height: 1,
-      content: ' Press Ctrl+C to exit, Ctrl+M to change model',
+      content:
+        ' Press Ctrl+C or type /exit to exit, Ctrl+M to change model, ESC for menu',
       tags: true,
       style: {
         fg: this.config.colors.statusBar.foreground || 'white',
@@ -87,19 +89,8 @@ export class PersistentChatInterface {
     this.screen.append(this.inputBox);
     this.screen.append(this.statusBar);
 
-    // Key bindings for exit
-    this.screen.key(['C-c'], () => {
-      this.cleanupAndExit();
-      return false; // Prevent default handling
-    });
-    
-    // Add additional exit handlers
-    const exitHandler = () => {
-      this.cleanupAndExit();
-    };
-    
-    process.on('SIGINT', exitHandler);
-    process.on('SIGTERM', exitHandler);
+    // Add multiple exit methods
+    this.setupExitHandlers();
 
     this.screen.key(['C-m'], () => {
       this.showModelSelection();
@@ -107,6 +98,12 @@ export class PersistentChatInterface {
 
     this.inputBox.key('enter', async () => {
       await this.handleUserInput();
+    });
+
+    // Setup global exception handler
+    process.on('uncaughtException', (error) => {
+      console.error('Uncaught exception:', error);
+      this.cleanupAndExit();
     });
 
     // Focus input
@@ -118,13 +115,158 @@ export class PersistentChatInterface {
   }
 
   /**
+   * Setup all exit handlers
+   */
+  private setupExitHandlers(): void {
+    // Method 1: Handle CTRL+C via blessed screen
+    this.screen.key(['C-c'], () => {
+      this.cleanupAndExit();
+    });
+
+    // Method 2: Use raw keypress events to catch CTRL+C even if blessed captures it
+    this.screen.program.on('keypress', (ch, key) => {
+      if (key && key.ctrl && key.name === 'c') {
+        this.cleanupAndExit();
+      } else if (key && key.name === 'escape') {
+        this.showExitConfirmation();
+      }
+    });
+
+    // Method 3: Process signal handlers
+    const exitHandler = () => {
+      this.cleanupAndExit();
+    };
+
+    process.on('SIGINT', exitHandler);
+    process.on('SIGTERM', exitHandler);
+  }
+
+  /**
+   * Show exit confirmation dialog
+   */
+  private showExitConfirmation(): void {
+    // Don't show confirmation if it's already visible
+    if (this.exitConfirmationBox) return;
+
+    // Create confirmation box
+    this.exitConfirmationBox = blessed.box({
+      top: 'center',
+      left: 'center',
+      width: '50%',
+      height: '30%',
+      content: 'Are you sure you want to exit?',
+      align: 'center',
+      valign: 'middle',
+      border: {
+        type: 'line',
+      },
+      style: {
+        border: {
+          fg: 'red',
+        },
+        bg: 'black',
+        fg: 'white',
+      },
+    });
+
+    // Add buttons
+    const yesButton = blessed.button({
+      parent: this.exitConfirmationBox,
+      bottom: 3,
+      left: '25%-10',
+      width: 10,
+      height: 3,
+      content: 'Yes',
+      align: 'center',
+      valign: 'middle',
+      style: {
+        bg: 'red',
+        fg: 'white',
+        focus: {
+          bg: 'dark-red',
+        },
+        hover: {
+          bg: 'dark-red',
+        },
+      },
+      border: {
+        type: 'line',
+      },
+    });
+
+    const noButton = blessed.button({
+      parent: this.exitConfirmationBox,
+      bottom: 3,
+      right: '25%-10',
+      width: 10,
+      height: 3,
+      content: 'No',
+      align: 'center',
+      valign: 'middle',
+      style: {
+        bg: 'green',
+        fg: 'white',
+        focus: {
+          bg: 'dark-green',
+        },
+        hover: {
+          bg: 'dark-green',
+        },
+      },
+      border: {
+        type: 'line',
+      },
+    });
+
+    // Events
+    yesButton.on('press', () => {
+      this.cleanupAndExit();
+    });
+
+    noButton.on('press', () => {
+      this.closeExitConfirmation();
+    });
+
+    // Key handling
+    this.exitConfirmationBox.key(['y', 'Y'], () => {
+      this.cleanupAndExit();
+    });
+
+    this.exitConfirmationBox.key(['n', 'N', 'escape'], () => {
+      this.closeExitConfirmation();
+    });
+
+    // Add to screen and focus
+    this.screen.append(this.exitConfirmationBox);
+    yesButton.focus();
+    this.screen.render();
+  }
+
+  /**
+   * Close exit confirmation dialog
+   */
+  private closeExitConfirmation(): void {
+    if (this.exitConfirmationBox) {
+      this.screen.remove(this.exitConfirmationBox);
+      this.exitConfirmationBox = null;
+      this.inputBox.focus();
+      this.screen.render();
+    }
+  }
+
+  /**
    * Clean up resources and exit
    */
   private cleanupAndExit(): void {
     try {
       // Ensure MCP server is disconnected
       this.mcpManager.disconnect();
-      
+
+      // Reset terminal state
+      this.screen.program.disableMouse();
+      this.screen.program.showCursor();
+      this.screen.program.normalBuffer();
+
       // Destroy the screen to restore terminal
       if (this.screen) {
         this.screen.destroy();
@@ -163,12 +305,17 @@ export class PersistentChatInterface {
     this.chatHistory.push({ role, content });
 
     // Format and display message
-    const prefix = role === 'user' ? '{green-fg}You:{/green-fg} ' : '{yellow-fg}AI:{/yellow-fg} ';
+    const prefix =
+      role === 'user'
+        ? '{green-fg}You:{/green-fg} '
+        : '{yellow-fg}AI:{/yellow-fg} ';
     const formattedMessage = prefix + content;
 
     // Append to chat box
     if (this.chatBox.getContent()) {
-      this.chatBox.setContent(this.chatBox.getContent() + '\n\n' + formattedMessage);
+      this.chatBox.setContent(
+        this.chatBox.getContent() + '\n\n' + formattedMessage
+      );
     } else {
       this.chatBox.setContent(formattedMessage);
     }
@@ -183,13 +330,16 @@ export class PersistentChatInterface {
    */
   private updateStatus(): void {
     const activeModel = getActiveModel();
-    let statusText = ` Model: ${activeModel.name} | Press Ctrl+C to exit, Ctrl+M to change model`;
-    
+    let statusText = ` Model: ${activeModel.name} | Press Ctrl+C or type /exit to exit, Ctrl+M to change model, ESC for menu`;
+
     // Add warning if no API key is set
-    if (!process.env.ANTHROPIC_API_KEY && activeModel.provider === ModelProvider.ANTHROPIC) {
+    if (
+      !process.env.ANTHROPIC_API_KEY &&
+      activeModel.provider === ModelProvider.ANTHROPIC
+    ) {
       statusText = ` WARNING: No ANTHROPIC_API_KEY set | ${statusText}`;
     }
-    
+
     this.statusBar.setContent(statusText);
     this.screen.render();
   }
@@ -202,6 +352,12 @@ export class PersistentChatInterface {
 
     const message = this.inputBox.getValue();
     if (!message.trim()) return;
+
+    // Check for exit command
+    if (message.trim().toLowerCase() === '/exit') {
+      this.cleanupAndExit();
+      return;
+    }
 
     // Clear input box
     this.inputBox.setValue('');
@@ -217,30 +373,36 @@ export class PersistentChatInterface {
 
     try {
       let response = '';
-      
+
       await chatWithModel(
         message,
         getActiveModel(),
         (chunk) => {
           // Add to response
           response += chunk;
-          
+
           // Update chatBox with current response
           const lastMsgIdx = this.chatHistory.length;
-          if (lastMsgIdx > 0 && this.chatHistory[lastMsgIdx - 1].role === 'ai') {
+          if (
+            lastMsgIdx > 0 &&
+            this.chatHistory[lastMsgIdx - 1].role === 'ai'
+          ) {
             // Update the existing AI message
             this.chatHistory[lastMsgIdx - 1].content = response;
           } else {
             // Add a new AI message
             this.chatHistory.push({ role: 'ai', content: response });
           }
-          
+
           // Redraw chat
           this.renderChatHistory();
         },
         () => {
           // When complete, add the message to history if not already added
-          if (this.chatHistory.length === 0 || this.chatHistory[this.chatHistory.length - 1].role !== 'ai') {
+          if (
+            this.chatHistory.length === 0 ||
+            this.chatHistory[this.chatHistory.length - 1].role !== 'ai'
+          ) {
             this.addMessage('ai', response);
           }
           this.isProcessing = false;
@@ -248,7 +410,10 @@ export class PersistentChatInterface {
         }
       );
     } catch (error) {
-      this.addMessage('ai', `Error: ${error instanceof Error ? error.message : String(error)}`);
+      this.addMessage(
+        'ai',
+        `Error: ${error instanceof Error ? error.message : String(error)}`
+      );
       this.isProcessing = false;
       this.updateStatus();
     }
@@ -259,15 +424,18 @@ export class PersistentChatInterface {
    */
   private renderChatHistory(): void {
     let content = '';
-    
+
     for (const message of this.chatHistory) {
-      const prefix = message.role === 'user' ? '{green-fg}You:{/green-fg} ' : '{yellow-fg}AI:{/yellow-fg} ';
+      const prefix =
+        message.role === 'user'
+          ? '{green-fg}You:{/green-fg} '
+          : '{yellow-fg}AI:{/yellow-fg} ';
       if (content) {
         content += '\n\n';
       }
       content += prefix + message.content;
     }
-    
+
     this.chatBox.setContent(content);
     this.chatBox.setScrollPerc(100);
     this.screen.render();
@@ -310,7 +478,7 @@ export class PersistentChatInterface {
 
     // Add models to list
     const activeModel = getActiveModel();
-    const items = this.availableModels.map(model => {
+    const items = this.availableModels.map((model) => {
       let label = model.name;
       if (model.id === activeModel.id) {
         label = '{green-fg}' + label + ' (active){/green-fg}';
@@ -330,7 +498,7 @@ export class PersistentChatInterface {
         setActiveModel(selectedModel.id);
         this.updateStatus();
       }
-      
+
       // Remove list and render screen
       list.detach();
       this.screen.render();
