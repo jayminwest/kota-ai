@@ -334,3 +334,177 @@ export function showMCPStatus(): void {
     }
   }
 }
+
+import fs from 'node:fs';
+import path from 'node:path';
+import yaml from 'js-yaml';
+
+/**
+ * Interface for MCP server import configuration file
+ */
+interface MCPImportConfig {
+  servers: MCPServerConfig[];
+}
+
+/**
+ * Schema validation for MCP import configuration
+ * @param data The imported data to validate
+ * @returns An object with validation result and optional error message
+ */
+function validateImportConfig(data: any): { valid: boolean; error?: string } {
+  // Check if data has servers property and it's an array
+  if (!data || typeof data !== 'object') {
+    return { valid: false, error: 'Import data must be an object' };
+  }
+  
+  if (!Array.isArray(data.servers)) {
+    return { valid: false, error: 'Import data must contain a servers array' };
+  }
+  
+  // Validate each server configuration
+  for (let i = 0; i < data.servers.length; i++) {
+    const server = data.servers[i];
+    
+    // Check required fields
+    if (!server.name) {
+      return { 
+        valid: false, 
+        error: `Server at index ${i} is missing required 'name' field` 
+      };
+    }
+    
+    if (!server.transportType) {
+      return { 
+        valid: false, 
+        error: `Server '${server.name}' is missing required 'transportType' field` 
+      };
+    }
+    
+    // Validate transport type
+    if (server.transportType !== 'stdio' && server.transportType !== 'http') {
+      return {
+        valid: false,
+        error: `Server '${server.name}' has invalid transportType. Must be 'stdio' or 'http'`
+      };
+    }
+    
+    // Validate connection based on transport type
+    if (!server.connection || typeof server.connection !== 'object') {
+      return {
+        valid: false,
+        error: `Server '${server.name}' is missing or has invalid 'connection' object`
+      };
+    }
+    
+    if (server.transportType === 'stdio') {
+      if (!server.connection.command) {
+        return {
+          valid: false,
+          error: `Server '${server.name}' with stdio transport is missing required 'command' in connection`
+        };
+      }
+    } else if (server.transportType === 'http') {
+      if (!server.connection.url) {
+        return {
+          valid: false,
+          error: `Server '${server.name}' with http transport is missing required 'url' in connection`
+        };
+      }
+    }
+  }
+  
+  return { valid: true };
+}
+
+/**
+ * Import MCP server configurations from a JSON or YAML file
+ *
+ * @param args - Command arguments, first argument is the file path, optional --force flag
+ */
+export function importMCPServers(args: string[]): void {
+  if (args.length < 1) {
+    console.log('Usage: kota mcp import <file-path> [--force]');
+    console.log('Supported file formats: JSON and YAML');
+    console.log('Options:');
+    console.log('  --force  Overwrite existing server configurations without prompting');
+    return;
+  }
+
+  const filePath = args[0];
+  const forceOverwrite = args.includes('--force');
+
+  try {
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      console.error(`Error: File not found: ${filePath}`);
+      return;
+    }
+
+    // Read file content
+    const fileContent = fs.readFileSync(filePath, 'utf-8');
+    
+    // Parse content based on file extension
+    let importData: MCPImportConfig;
+    const extension = path.extname(filePath).toLowerCase();
+    
+    if (extension === '.json') {
+      importData = JSON.parse(fileContent) as MCPImportConfig;
+    } else if (extension === '.yml' || extension === '.yaml') {
+      importData = yaml.load(fileContent) as MCPImportConfig;
+    } else {
+      console.error('Error: Unsupported file format. Please use JSON or YAML files.');
+      return;
+    }
+
+    // Validate the imported data
+    const validation = validateImportConfig(importData);
+    if (!validation.valid) {
+      console.error(`Error validating import data: ${validation.error}`);
+      return;
+    }
+
+    // Process server configurations
+    const serversToImport = importData.servers;
+    let imported = 0;
+    let skipped = 0;
+
+    for (const serverConfig of serversToImport) {
+      // Convert the transportType string to enum
+      const transportType = serverConfig.transportType as keyof typeof MCPTransportType;
+      
+      // Check if server with this name already exists
+      const existingServer = mcpClient.getServerByName(serverConfig.name);
+      
+      if (existingServer && !forceOverwrite) {
+        console.log(`Skipping server "${serverConfig.name}" - already exists. Use --force to overwrite.`);
+        skipped++;
+        continue;
+      }
+
+      // Create the final server config object
+      const finalConfig: MCPServerConfig = {
+        name: serverConfig.name,
+        transportType: MCPTransportType[transportType],
+        displayName: serverConfig.displayName,
+        description: serverConfig.description,
+        isDefault: serverConfig.isDefault,
+        connection: serverConfig.connection,
+      };
+
+      // Add the server to the configuration
+      mcpClient.addServer(finalConfig);
+      console.log(`Imported MCP server "${serverConfig.name}"`);
+      
+      if (serverConfig.isDefault) {
+        console.log(`Set "${serverConfig.name}" as the default MCP server`);
+      }
+      
+      imported++;
+    }
+
+    console.log(`\nImport summary: ${imported} servers imported, ${skipped} skipped.`);
+
+  } catch (error) {
+    console.error(`Error importing MCP server configurations: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}

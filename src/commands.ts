@@ -11,6 +11,7 @@ import {
   removeMCPServer,
   setDefaultMCPServer,
   showMCPStatus,
+  importMCPServers,
 } from './mcp/commands.js';
 import { createDefaultConfigFile } from './config.js';
 
@@ -100,6 +101,7 @@ function showHelp(): void {
   console.log(
     '  mcp status              Show the status of the current MCP connection'
   );
+  console.log('  mcp import <file-path>  Import MCP server configurations from file');
   console.log('\nConfig Commands:');
   console.log('  config create [--format yaml|json]   Create a default chat configuration file');
 }
@@ -151,13 +153,14 @@ export async function execCommand(args: string[]): Promise<void> {
 async function handleMCPCommands(args: string[]): Promise<void> {
   if (args.length === 0) {
     console.error(
-      'Please specify an MCP command: connect, disconnect, or status'
+      'Please specify an MCP command: connect, disconnect, status, list, add, remove, default, import'
     );
     return;
   }
 
   const mcpManager = MCPManager.getInstance();
   const subCommand = args[0];
+  const subCommandArgs = args.slice(1);
 
   switch (subCommand) {
     case 'connect': {
@@ -191,10 +194,35 @@ async function handleMCPCommands(args: string[]): Promise<void> {
       );
       break;
     }
+    
+    case 'list': {
+      listMCPServers();
+      break;
+    }
+    
+    case 'add': {
+      addMCPServer(subCommandArgs);
+      break;
+    }
+    
+    case 'remove': {
+      removeMCPServer(subCommandArgs);
+      break;
+    }
+    
+    case 'default': {
+      setDefaultMCPServer(subCommandArgs);
+      break;
+    }
+    
+    case 'import': {
+      importMCPServers(subCommandArgs);
+      break;
+    }
 
     default:
       console.error(
-        `Unknown MCP command: ${subCommand}. Valid options are: connect, disconnect, status`
+        `Unknown MCP command: ${subCommand}. Valid options are: connect, disconnect, status, list, add, remove, default, import`
       );
   }
 }
