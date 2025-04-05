@@ -20,14 +20,18 @@ export class AnthropicService {
   private constructor() {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
-      throw new Error(
-        'ANTHROPIC_API_KEY environment variable is not set. Please set it to use the chat functionality.'
+      console.warn(
+        'ANTHROPIC_API_KEY environment variable is not set. Anthropic models will not be available.'
       );
+      // Initialize with a dummy key that will be checked before use
+      this.client = new Anthropic({
+        apiKey: 'dummy_key_anthropic_unavailable',
+      });
+    } else {
+      this.client = new Anthropic({
+        apiKey,
+      });
     }
-
-    this.client = new Anthropic({
-      apiKey,
-    });
   }
 
   /**
@@ -41,6 +45,13 @@ export class AnthropicService {
     onChunk: (chunk: string) => void,
     onComplete: () => void
   ): Promise<void> {
+    // Check if API key is available
+    if (this.client.apiKey === 'dummy_key_anthropic_unavailable') {
+      throw new Error(
+        'ANTHROPIC_API_KEY environment variable is not set. Please set it to use Anthropic models.'
+      );
+    }
+    
     try {
       const stream = await this.client.messages.create({
         model: 'claude-3-sonnet-20240229',
