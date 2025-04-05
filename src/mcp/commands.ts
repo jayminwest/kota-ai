@@ -6,6 +6,10 @@ import {
 } from '../types/mcp.js';
 import { MCPClient } from './client.js';
 import { ServerCapabilities, SupportedModel } from './sdk-mock.js';
+import { importMCPServers } from './import.js';
+
+// Re-export the import function
+export { importMCPServers };
 
 // Create a singleton instance of the MCP client
 const mcpClient = new MCPClient();

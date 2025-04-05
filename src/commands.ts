@@ -80,9 +80,10 @@ function showHelp(): void {
     '  mcp disconnect          Disconnect from the current MCP server'
   );
   console.log('  mcp list                List available MCP servers');
-  console.log('  mcp add <n> <type>   Add a new MCP server configuration');
-  console.log('  mcp remove <n>       Remove an MCP server configuration');
-  console.log('  mcp default <n>      Set the default MCP server');
+  console.log('  mcp add <name> <type>   Add a new MCP server configuration');
+  console.log('  mcp remove <name>       Remove an MCP server configuration');
+  console.log('  mcp default <name>      Set the default MCP server');
+  console.log('  mcp import <file-path>  Import MCP servers from a JSON file');
   console.log(
     '  mcp status              Show the status of the current MCP connection'
   );
@@ -189,43 +190,74 @@ async function handleModelCommands(args: string[]): Promise<void> {
 async function handleMCPCommands(args: string[]): Promise<void> {
   if (args.length === 0) {
     console.error(
-      'Please specify an MCP command: connect, disconnect, status, list, add, remove, default, import'
+      'Please specify an MCP command: connect, disconnect, status, list, add, remove, default, or import'
     );
     return;
   }
 
   const subCommand = args[0];
-  const mcpArgs = args.slice(1);
+  const subCommandArgs = args.slice(1);
 
   switch (subCommand) {
-    case 'connect':
-      await connectMCPServer(mcpArgs);
+    case 'connect': {
+      if (subCommandArgs.length === 0) {
+        await connectMCPServer([]);  // Connect to default server
+      } else {
+        await connectMCPServer(subCommandArgs);
+      }
       break;
-    case 'disconnect':
+    }
+
+    case 'disconnect': {
       await disconnectMCPServer();
       break;
-    case 'list':
-      listMCPServers();
-      break;
-    case 'add':
-      addMCPServer(mcpArgs);
-      break;
-    case 'remove':
-      removeMCPServer(mcpArgs);
-      break;
-    case 'default':
-      setDefaultMCPServer(mcpArgs);
-      break;
-    case 'status':
+    }
+
+    case 'status': {
       showMCPStatus();
       break;
-    case 'import':
-      importMCPServers(mcpArgs);
+    }
+
+    case 'list': {
+      listMCPServers();
       break;
-    default:
-      console.error(
-        `Unknown MCP command: ${subCommand}. Valid options are: connect, disconnect, status, list, add, remove, default, import`
-      );
+    }
+
+    case 'add': {
+      addMCPServer(subCommandArgs);
+      break;
+    }
+
+    case 'remove': {
+      removeMCPServer(subCommandArgs);
+      break;
+    }
+
+    case 'default': {
+      setDefaultMCPServer(subCommandArgs);
+      break;
+    }
+
+    case 'import': {
+      await importMCPServers(subCommandArgs);
+      break;
+    }
+
+    default: {
+      // Get instance just for backward compatibility with direct MCP server path
+      const mcpManager = MCPManager.getInstance();
+      
+      try {
+        // Assume the first argument is a direct path to an MCP server
+        const mcpPath = args[0];
+        const result = await mcpManager.connect(mcpPath);
+        console.log(result);
+      } catch (error) {
+        console.error(
+          `Unknown MCP command: ${subCommand}. Valid options are: connect, disconnect, status, list, add, remove, default, import`
+        );
+      }
+    }
   }
 }
 
