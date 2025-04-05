@@ -6,10 +6,10 @@ import {
 } from '../types/mcp.js';
 import { MCPClient } from './client.js';
 import { ServerCapabilities, SupportedModel } from './sdk-mock.js';
-import { importMCPServers } from './import.js';
+import { importMCPServers as importMCPServersFromFile } from './import.js';
 
 // Re-export the import function
-export { importMCPServers };
+export { importMCPServersFromFile as importMCPServers };
 
 // Create a singleton instance of the MCP client
 const mcpClient = new MCPClient();
@@ -425,113 +425,4 @@ function validateImportConfig(data: any): { valid: boolean; error?: string } {
  *
  * @param args - Command arguments, first argument is the file path, optional --force flag
  */
-export function importMCPServers(args: string[]): void {
-  // Use the singleton instance of MCPClient
-  // This was defined at the top of the file as: const mcpClient = new MCPClient();
-  if (args.length < 1) {
-    console.log('Usage: kota mcp import <file-path> [--force]');
-    console.log('Supported file formats: JSON and YAML');
-    console.log('Options:');
-    console.log(
-      '  --force  Overwrite existing server configurations without prompting'
-    );
-    return;
-  }
-
-  const filePath = args[0];
-  const forceOverwrite = args.includes('--force');
-
-  try {
-    // Check if file exists
-    if (!fs.existsSync(filePath)) {
-      console.error(`Error: File not found: ${filePath}`);
-      return;
-    }
-
-    // Read file content
-    const fileContent = fs.readFileSync(filePath, 'utf-8');
-
-    // Parse content based on file extension
-    let importData: MCPImportConfig;
-    const extension = path.extname(filePath).toLowerCase();
-
-    if (extension === '.json') {
-      importData = JSON.parse(fileContent) as MCPImportConfig;
-    } else if (extension === '.yml' || extension === '.yaml') {
-      importData = yaml.load(fileContent) as MCPImportConfig;
-    } else {
-      console.error(
-        'Error: Unsupported file format. Please use JSON or YAML files.'
-      );
-      return;
-    }
-
-    // Validate the imported data
-    const validation = validateImportConfig(importData);
-    if (!validation.valid) {
-      console.error(`Error validating import data: ${validation.error}`);
-      return;
-    }
-
-    // Process server configurations
-    const serversToImport = importData.servers;
-    let imported = 0;
-    let skipped = 0;
-
-    for (const serverConfig of serversToImport) {
-      // Convert the string transport type to enum
-      let mcpTransportType: MCPTransportType;
-
-      if (serverConfig.transportType === 'stdio') {
-        mcpTransportType = MCPTransportType.STDIO;
-      } else if (serverConfig.transportType === 'http') {
-        mcpTransportType = MCPTransportType.HTTP;
-      } else {
-        console.error(
-          `Error: Invalid transport type "${serverConfig.transportType}" for server "${serverConfig.name}"`
-        );
-        skipped++;
-        continue;
-      }
-
-      // Check if server with this name already exists
-      const existingServer = mcpClient.getServerByName(serverConfig.name);
-
-      if (existingServer && !forceOverwrite) {
-        console.log(
-          `Skipping server "${serverConfig.name}" - already exists. Use --force to overwrite.`
-        );
-        skipped++;
-        continue;
-      }
-
-      // Create the final server config object
-      const finalConfig: MCPServerConfig = {
-        name: serverConfig.name,
-        transportType: mcpTransportType,
-        displayName: serverConfig.displayName,
-        description: serverConfig.description,
-        isDefault: serverConfig.isDefault,
-        connection: serverConfig.connection,
-      };
-
-      // Add the server to the configuration
-      mcpClient.addServer(finalConfig);
-      console.log(`Imported MCP server "${serverConfig.name}"`);
-
-      if (serverConfig.isDefault) {
-        console.log(`Set "${serverConfig.name}" as the default MCP server`);
-      }
-
-      imported++;
-    }
-
-    console.log(
-      `\nImport summary: ${imported} servers imported, ${skipped} skipped.`
-    );
-  } catch (error) {
-    console.error(
-      `Error importing MCP server configurations: ${error instanceof Error ? error.message : String(error)}`
-    );
-  }
-}
+// The importMCPServers function is now imported from './import.js' and re-exported above
