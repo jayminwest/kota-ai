@@ -5,6 +5,7 @@ import {
   listModels,
   setActiveModel,
   ModelConfig,
+  ModelProvider,
   getAvailableModels,
 } from './model-commands.js';
 import { MCPManager } from './mcpManager.js';
