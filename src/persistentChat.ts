@@ -2,6 +2,11 @@ import blessed from 'blessed';
 import { execCommand } from './commands.js';
 import { AnthropicService } from './anthropicService.js';
 import { MCPManager } from './mcpManager.js';
+import { exec } from 'node:child_process';
+import { promisify } from 'node:util';
+
+// Promisify exec to use with async/await
+const execAsync = promisify(exec);
 
 interface ChatMessage {
   content: string;
@@ -19,6 +24,11 @@ export class PersistentChatInterface {
   private inputHistoryIndex: number = -1;
   private anthropicService: AnthropicService | null = null;
   private mcpManager: MCPManager = MCPManager.getInstance();
+  // List of potentially dangerous commands that will require confirmation
+  private dangerousCommands: string[] = [
+    'rm -rf', 'rm -r', 'sudo rm', 'mkfs', 'dd', 'format', 
+    'chmod -R 777', 'chmod 777', ':(){', '> /dev', '> /etc/passwd'
+  ];
 
   constructor() {
     // Initialize the blessed screen
@@ -127,6 +137,12 @@ export class PersistentChatInterface {
     this.addSystemMessage(
       'MCP commands: /run mcp connect <path>, /run mcp disconnect, /run mcp status'
     );
+    this.addSystemMessage(
+      'Terminal commands: /run terminal <command> (or /run term <command>)'
+    );
+    this.addSystemMessage(
+      'Type /help for more information on available commands'
+    );
   }
 
   // Clean up resources and exit
@@ -172,20 +188,64 @@ export class PersistentChatInterface {
     if (input.startsWith('/run ')) {
       // Handle command
       const command = input.substring(5).trim();
-      this.addSystemMessage(`Executing command: ${command}`);
-
-      try {
-        const result = await this.executeCommand(command.split(' '));
-        this.addSystemMessage(
-          `Command output:\n${result || 'Command executed successfully.'}`
-        );
-      } catch (error) {
-        this.addSystemMessage(
-          `Error executing command: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
+      
+      if (command === 'help') {
+        this.displayHelpMessage();
+        return;
       }
+      
+      // Check if it's a terminal command
+      if (command.startsWith('terminal ') || command.startsWith('term ')) {
+        const terminalCommand = command.startsWith('terminal ') 
+          ? command.substring(9).trim() 
+          : command.substring(5).trim();
+        
+        // Parse flags and command
+        const includeInContext = terminalCommand.startsWith('-a ');
+        const cmdToRun = includeInContext ? terminalCommand.substring(3).trim() : terminalCommand;
+        
+        if (!cmdToRun) {
+          this.addSystemMessage('Please provide a terminal command to execute');
+          return;
+        }
+        
+        // Check for potentially dangerous commands
+        if (this.isCommandDangerous(cmdToRun)) {
+          if (!cmdToRun.startsWith('confirm:')) {
+            this.addSystemMessage(
+              `Warning: The command '${cmdToRun}' may be potentially dangerous.`
+            );
+            this.addSystemMessage(
+              `To confirm execution, run: /run terminal confirm:${cmdToRun}`
+            );
+            return;
+          }
+          // Remove the confirm: prefix
+          const confirmedCommand = cmdToRun.substring(8);
+          await this.executeTerminalCommand(confirmedCommand, includeInContext);
+        } else {
+          // Execute non-dangerous command directly
+          await this.executeTerminalCommand(cmdToRun, includeInContext);
+        }
+      } else {
+        // It's a KOTA command
+        this.addSystemMessage(`Executing KOTA command: ${command}`);
+        
+        try {
+          const result = await this.executeCommand(command.split(' '));
+          this.addSystemMessage(
+            `Command output:\n${result || 'Command executed successfully.'}`
+          );
+        } catch (error) {
+          this.addSystemMessage(
+            `Error executing command: ${
+              error instanceof Error ? error.message : String(error)
+            }`
+          );
+        }
+      }
+    } else if (input === '/help') {
+      this.displayHelpMessage();
     } else {
       // Handle chat message
       if (!this.anthropicService) {
@@ -218,8 +278,82 @@ export class PersistentChatInterface {
 
     this.screen.render();
   }
+  
+  // Display help message
+  private displayHelpMessage(): void {
+    this.addSystemMessage(
+      `Available commands:
+/help - Display this help message
+/run help - Display command help
+/run <kota-command> - Execute a KOTA command
+/run terminal <command> - Execute a terminal command
+  or /run term <command> (shorthand)
+  Options:
+    -a - Include command and output in conversation context
+  Examples:
+    /run terminal ls -la
+    /run term -a pwd
+    
+For potentially dangerous commands, a confirmation will be required.
+To confirm execution, add 'confirm:' at the beginning of the command:
+    /run terminal confirm:rm -f file.txt`
+    );
+  }
+  
+  // Execute a terminal command using child_process
+  private async executeTerminalCommand(command: string, includeInContext: boolean): Promise<void> {
+    this.addSystemMessage(`Executing terminal command: ${command}`);
+    
+    try {
+      // Execute the command with a timeout of 30 seconds
+      const { stdout, stderr } = await execAsync(command, { timeout: 30000 });
+      
+      // Display stdout if available
+      if (stdout && stdout.trim() !== '') {
+        this.addSystemMessage(`Command output:\n${stdout}`);
+      } else {
+        this.addSystemMessage('Command executed successfully with no output.');
+      }
+      
+      // Display stderr if available
+      if (stderr && stderr.trim() !== '') {
+        this.addSystemMessage(`Error output:\n${stderr}`);
+      }
+      
+      // If -a flag was used, include the command and output in the conversation context
+      if (includeInContext) {
+        this.messageHistory.push({
+          content: `Terminal command '${command}' executed with results:\n${stdout}${stderr ? '\nError output:\n' + stderr : ''}`,
+          sender: 'system',
+          timestamp: new Date(),
+        });
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      // Provide more specific error messages for common issues
+      if (errorMessage.includes('command not found')) {
+        this.addSystemMessage(`Error: Command not found: ${command.split(' ')[0]}`);
+      } else if (errorMessage.includes('permission denied')) {
+        this.addSystemMessage('Error: Permission denied. Try with appropriate permissions.');
+      } else if (errorMessage.includes('ETIMEDOUT') || (error instanceof Error && 'code' in error && error.code === 'ETIMEDOUT')) {
+        this.addSystemMessage('Error: Command execution timed out after 30 seconds.');
+      } else {
+        this.addSystemMessage(`Error executing command: ${errorMessage}`);
+      }
+    }
+  }
+  
+  // Check if a command is potentially dangerous
+  private isCommandDangerous(command: string): boolean {
+    const normalizedCommand = command.toLowerCase().trim();
+    
+    return this.dangerousCommands.some(dangerousCmd => 
+      normalizedCommand.includes(dangerousCmd)
+    );
+  }
 
-  // Execute a command and capture its output
+  // Execute a KOTA command and capture its output
   private async executeCommand(args: string[]): Promise<string> {
     // Capture console output
     let output = '';
