@@ -469,8 +469,18 @@ export function importMCPServers(args: string[]): void {
     let skipped = 0;
 
     for (const serverConfig of serversToImport) {
-      // Convert the transportType string to enum
-      const transportType = serverConfig.transportType as keyof typeof MCPTransportType;
+      // Convert the string transport type to enum
+      let mcpTransportType: MCPTransportType;
+      
+      if (serverConfig.transportType === 'stdio') {
+        mcpTransportType = MCPTransportType.STDIO;
+      } else if (serverConfig.transportType === 'http') {
+        mcpTransportType = MCPTransportType.HTTP;
+      } else {
+        console.error(`Error: Invalid transport type "${serverConfig.transportType}" for server "${serverConfig.name}"`);
+        skipped++;
+        continue;
+      }
       
       // Check if server with this name already exists
       const existingServer = mcpClient.getServerByName(serverConfig.name);
@@ -484,7 +494,7 @@ export function importMCPServers(args: string[]): void {
       // Create the final server config object
       const finalConfig: MCPServerConfig = {
         name: serverConfig.name,
-        transportType: MCPTransportType[transportType],
+        transportType: mcpTransportType,
         displayName: serverConfig.displayName,
         description: serverConfig.description,
         isDefault: serverConfig.isDefault,
