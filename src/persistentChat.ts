@@ -2,6 +2,8 @@ import blessed from 'blessed';
 import { execCommand } from './commands.js';
 import { AnthropicService } from './anthropicService.js';
 import { MCPManager } from './mcpManager.js';
+import { ModelConfig } from './types/model-config.js';
+import { ModelConfigLoader } from './config/model-config-loader.js';
 
 interface ChatMessage {
   content: string;
@@ -19,8 +21,12 @@ export class PersistentChatInterface {
   private inputHistoryIndex: number = -1;
   private anthropicService: AnthropicService | null = null;
   private mcpManager: MCPManager = MCPManager.getInstance();
+  private configLoader: ModelConfigLoader;
 
   constructor() {
+    // Initialize the config loader
+    this.configLoader = new ModelConfigLoader();
+
     // Initialize the blessed screen
     this.screen = blessed.screen({
       smartCSR: true,
@@ -79,8 +85,7 @@ export class PersistentChatInterface {
       width: '100%',
       height: 1,
       tags: true,
-      content:
-        '{bold}KOTA AI{/bold} | Press Ctrl+C to exit | Enter to send | Up/Down for history',
+      content: '{bold}KOTA AI{/bold} | Press Ctrl+C to exit | Enter to send | Up/Down for history',
       style: {
         fg: 'white',
         bg: 'blue',
@@ -96,6 +101,9 @@ export class PersistentChatInterface {
     this.inputBox.key(['enter'], () => this.handleInput());
     this.inputBox.key(['up'], () => this.navigateInputHistory('up'));
     this.inputBox.key(['down'], () => this.navigateInputHistory('down'));
+    
+    // Add model selection hotkey
+    this.screen.key(['C-m'], () => this.showModelSelectionMenu());
 
     // Add Ctrl+C handler to inputBox to ensure it works when input has focus
     this.inputBox.key(['C-c'], () => this.cleanupAndExit());
@@ -109,6 +117,7 @@ export class PersistentChatInterface {
     // Initialize Anthropic service if API key is available
     try {
       this.anthropicService = AnthropicService.getInstance();
+      this.updateStatusBar();
     } catch (error) {
       this.addSystemMessage(
         `Error initializing Anthropic service: ${
@@ -125,6 +134,9 @@ export class PersistentChatInterface {
       'Welcome to KOTA AI! Type a message to chat with Claude or use /run followed by a command to execute KOTA commands.'
     );
     this.addSystemMessage(
+      'Type /model to see available models. Press Ctrl+M to change models.'
+    );
+    this.addSystemMessage(
       'MCP commands: /run mcp connect <path>, /run mcp disconnect, /run mcp status'
     );
   }
@@ -134,6 +146,102 @@ export class PersistentChatInterface {
     // Ensure MCP server is disconnected
     this.mcpManager.disconnect();
     process.exit(0);
+  }
+
+  // Update the status bar with current model info
+  private updateStatusBar(): void {
+    if (!this.anthropicService) {
+      this.statusBar.setContent(
+        '{bold}KOTA AI{/bold} | No AI service available | Press Ctrl+C to exit'
+      );
+      return;
+    }
+
+    const currentModel = this.anthropicService.getCurrentModel();
+    if (!currentModel) {
+      this.statusBar.setContent(
+        '{bold}KOTA AI{/bold} | No model selected | Press Ctrl+M to select a model | Ctrl+C to exit'
+      );
+      return;
+    }
+
+    this.statusBar.setContent(
+      `{bold}KOTA AI{/bold} | Model: {yellow-fg}${currentModel.name}{/yellow-fg} | Ctrl+M to change model | Ctrl+C to exit`
+    );
+
+    this.screen.render();
+  }
+
+  // Show a menu to select a model
+  private showModelSelectionMenu(): void {
+    if (!this.anthropicService) {
+      this.addSystemMessage('AI service is not available. Cannot change models.');
+      return;
+    }
+    
+    const availableModels = this.configLoader.getModels();
+    if (availableModels.length === 0) {
+      this.addSystemMessage('No models available in configuration.');
+      return;
+    }
+
+    // Create a list for model selection
+    const modelList = blessed.list({
+      top: 'center',
+      left: 'center',
+      width: '80%',
+      height: '50%',
+      tags: true,
+      border: {
+        type: 'line',
+      },
+      style: {
+        border: {
+          fg: 'blue',
+        },
+        selected: {
+          bg: 'blue',
+          fg: 'white',
+        },
+      },
+      keys: true,
+      vi: true,
+      mouse: true,
+      items: availableModels.map(model => {
+        const currentTag = this.anthropicService?.getCurrentModel()?.id === model.id ? ' (current)' : '';
+        const defaultTag = model.default ? ' [default]' : '';
+        return `${model.name}${currentTag}${defaultTag} - ${model.description}`;
+      }),
+    });
+
+    // Add the list to the screen
+    this.screen.append(modelList);
+    modelList.focus();
+    this.screen.render();
+
+    // Handle selection
+    modelList.on('select', (_, index) => {
+      const selectedModel = availableModels[index];
+      
+      if (this.anthropicService?.setCurrentModel(selectedModel.id)) {
+        this.addSystemMessage(`Switched to model: ${selectedModel.name}`);
+        this.updateStatusBar();
+      } else {
+        this.addSystemMessage(`Failed to switch to model: ${selectedModel.name}`);
+      }
+      
+      // Remove the list and focus back on input
+      this.screen.remove(modelList);
+      this.inputBox.focus();
+      this.screen.render();
+    });
+
+    // Handle escape key to close the menu
+    modelList.key(['escape'], () => {
+      this.screen.remove(modelList);
+      this.inputBox.focus();
+      this.screen.render();
+    });
   }
 
   // Start the chat interface
@@ -169,6 +277,12 @@ export class PersistentChatInterface {
 
   // Process the user input
   private async processInput(input: string): Promise<void> {
+    // Special command to show model info
+    if (input === '/model') {
+      this.showModelInfo();
+      return;
+    }
+    
     if (input.startsWith('/run ')) {
       // Handle command
       const command = input.substring(5).trim();
@@ -217,6 +331,26 @@ export class PersistentChatInterface {
     }
 
     this.screen.render();
+  }
+
+  // Show information about the current model and available models
+  private showModelInfo(): void {
+    if (!this.anthropicService) {
+      this.addSystemMessage('AI service not available.');
+      return;
+    }
+
+    const currentModel = this.anthropicService.getCurrentModel();
+    if (!currentModel) {
+      this.addSystemMessage('No model currently selected.');
+    } else {
+      this.addSystemMessage(`Current model: ${currentModel.name} (${currentModel.id})`);
+      this.addSystemMessage(`Provider: ${currentModel.provider}`);
+      this.addSystemMessage(`Description: ${currentModel.description}`);
+      this.addSystemMessage(`Parameters: temperature=${currentModel.parameters.temperature}, max_tokens=${currentModel.parameters.max_tokens}`);
+    }
+
+    this.addSystemMessage('Press Ctrl+M to change the model.');
   }
 
   // Execute a command and capture its output

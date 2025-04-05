@@ -1,4 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { ModelConfig } from './types/model-config.js';
+import { ModelConfigLoader } from './config/model-config-loader.js';
 
 /**
  * Service for interacting with the Anthropic API
@@ -6,6 +8,8 @@ import Anthropic from '@anthropic-ai/sdk';
 export class AnthropicService {
   private static instance: AnthropicService | null = null;
   private client: Anthropic;
+  private configLoader: ModelConfigLoader;
+  private currentModel: ModelConfig | undefined;
 
   /**
    * Get the singleton instance of AnthropicService
@@ -28,6 +32,32 @@ export class AnthropicService {
     this.client = new Anthropic({
       apiKey,
     });
+
+    // Initialize the config loader and get the default model
+    this.configLoader = new ModelConfigLoader();
+    
+    // Try to get the default Anthropic model or the first available one
+    const anthropicModels = this.configLoader.getModelsByProvider('anthropic');
+    
+    if (anthropicModels.length === 0) {
+      console.warn('No Anthropic models found in configuration, using default Claude 3 Sonnet');
+      // If no models found, create a default model config
+      this.currentModel = {
+        id: 'claude-3-sonnet-20240229',
+        provider: 'anthropic',
+        name: 'Claude 3 Sonnet',
+        description: 'Anthropic\'s balanced model for most tasks',
+        parameters: {
+          temperature: 0.7,
+          max_tokens: 4096,
+          system: 'You are KOTA, a Knowledge Oriented Thinking Assistant. You provide helpful, accurate, and concise answers.'
+        },
+        default: true
+      };
+    } else {
+      // Get default model from the anthropic models
+      this.currentModel = anthropicModels.find(model => model.default) || anthropicModels[0];
+    }
   }
 
   /**
@@ -42,12 +72,18 @@ export class AnthropicService {
     onComplete: () => void
   ): Promise<void> {
     try {
+      if (!this.currentModel) {
+        throw new Error('No model configuration available');
+      }
+
+      // Create a copy of the parameters to avoid modifying the original
+      const parameters = { ...this.currentModel.parameters };
+      
       const stream = await this.client.messages.create({
-        model: 'claude-3-sonnet-20240229',
-        max_tokens: 1000,
-        temperature: 0.7,
-        system:
-          'You are KOTA, a Knowledge Oriented Thinking Assistant. You provide helpful, accurate, and concise answers.',
+        model: this.currentModel.id,
+        max_tokens: parameters.max_tokens,
+        temperature: parameters.temperature,
+        system: parameters.system,
         messages: [{ role: 'user', content: message }],
         stream: true,
       });
@@ -71,5 +107,38 @@ export class AnthropicService {
         `Error communicating with Anthropic API: ${errorMessage}`
       );
     }
+  }
+
+  /**
+   * Get all available Anthropic models
+   * @returns Array of available models
+   */
+  public getAvailableModels(): ModelConfig[] {
+    return this.configLoader.getModelsByProvider('anthropic');
+  }
+
+  /**
+   * Get the currently active model
+   * @returns The current model configuration
+   */
+  public getCurrentModel(): ModelConfig | undefined {
+    return this.currentModel;
+  }
+
+  /**
+   * Set the current model by ID
+   * @param modelId The ID of the model to use
+   * @returns True if successful, false if model not found
+   */
+  public setCurrentModel(modelId: string): boolean {
+    const model = this.configLoader.getModelById(modelId);
+    
+    // Check if model exists and is an Anthropic model
+    if (!model || model.provider !== 'anthropic') {
+      return false;
+    }
+    
+    this.currentModel = model;
+    return true;
   }
 }
