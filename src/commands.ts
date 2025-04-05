@@ -251,6 +251,7 @@ async function handleMCPCommands(args: string[]): Promise<void> {
         );
       }
     }
+  }
 }
 
 /**
