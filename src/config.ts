@@ -72,7 +72,7 @@ export function getUserHomeDir(): string {
  * Get the configuration directory path
  */
 export function getConfigDir(): string {
-  return path.join(getUserHomeDir(), '.kota');
+  return path.join(getUserHomeDir(), '.kota-ai');
 }
 
 /**
