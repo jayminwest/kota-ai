@@ -87,19 +87,19 @@ export class PersistentChatInterface {
     this.screen.append(this.inputBox);
     this.screen.append(this.statusBar);
 
-    // Key bindings
+    // Key bindings for exit
     this.screen.key(['C-c'], () => {
-      return this.cleanupAndExit();
+      this.cleanupAndExit();
+      return false; // Prevent default handling
     });
     
     // Add additional exit handlers
-    process.on('SIGINT', () => {
-      return this.cleanupAndExit();
-    });
+    const exitHandler = () => {
+      this.cleanupAndExit();
+    };
     
-    process.on('SIGTERM', () => {
-      return this.cleanupAndExit();
-    });
+    process.on('SIGINT', exitHandler);
+    process.on('SIGTERM', exitHandler);
 
     this.screen.key(['C-m'], () => {
       this.showModelSelection();
@@ -121,15 +121,21 @@ export class PersistentChatInterface {
    * Clean up resources and exit
    */
   private cleanupAndExit(): void {
-    // Ensure MCP server is disconnected
-    this.mcpManager.disconnect();
-    
-    // Destroy the screen to restore terminal
-    this.screen.destroy();
-    
-    // Exit immediately
-    console.log('KOTA chat session ended.');
-    process.exit(0);
+    try {
+      // Ensure MCP server is disconnected
+      this.mcpManager.disconnect();
+      
+      // Destroy the screen to restore terminal
+      if (this.screen) {
+        this.screen.destroy();
+      }
+    } catch (error) {
+      console.error('Error during cleanup:', error);
+    } finally {
+      // Force exit regardless of any errors
+      console.log('KOTA chat session ended.');
+      process.exit(0);
+    }
   }
 
   /**
