@@ -1,0 +1,30 @@
+{
+  "servers": [
+    {
+      "name": "local-sample",
+      "displayName": "Local Sample Server",
+      "description": "A sample local MCP server running in stdio mode",
+      "transportType": "stdio",
+      "isDefault": true,
+      "connection": {
+        "command": "node",
+        "args": ["./mcp-server.js"],
+        "cwd": "./local-server"
+      }
+    },
+    {
+      "name": "remote-sample",
+      "displayName": "Remote Sample Server",
+      "description": "A sample remote MCP server running over HTTP",
+      "transportType": "http",
+      "connection": {
+        "url": "https://example.com/mcp-api",
+        "apiKey": "sample-api-key-123",
+        "headers": {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        }
+      }
+    }
+  ]
+}

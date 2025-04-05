@@ -87,10 +87,6 @@ function showHelp(): void {
   console.log(
     '  mcp status              Show the status of the current MCP connection'
   );
-  console.log(
-    '  mcp import <file-path>  Import MCP server configurations from file'
-  );
-  console.log('\nModel Commands:');
   console.log('  model list              List available AI models');
   console.log('  model use <model-id>    Set the active AI model');
   console.log('\nConfig Commands:');
@@ -201,7 +197,7 @@ async function handleMCPCommands(args: string[]): Promise<void> {
   switch (subCommand) {
     case 'connect': {
       if (subCommandArgs.length === 0) {
-        await connectMCPServer([]);  // Connect to default server
+        await connectMCPServer([]); // Connect to default server
       } else {
         await connectMCPServer(subCommandArgs);
       }
@@ -246,7 +242,7 @@ async function handleMCPCommands(args: string[]): Promise<void> {
     default: {
       // Get instance just for backward compatibility with direct MCP server path
       const mcpManager = MCPManager.getInstance();
-      
+
       try {
         // Assume the first argument is a direct path to an MCP server
         const mcpPath = args[0];
