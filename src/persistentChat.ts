@@ -343,8 +343,8 @@ export class PersistentChatInterface {
           content += `{bold}{green-fg}[KOTA AI] ${timeString}{/green-fg}{/bold}\n${message.content}\n\n`;
           break;
         case 'system':
-          // Use {yellow} instead of {yellow-fg} as a test
-          content += `{bold}{yellow}[System] ${timeString}{/yellow}{/bold}\n${message.content}\n\n`;
+          // Revert to {yellow-fg} and remove {bold} to test
+          content += `{yellow-fg}[System] ${timeString}{/yellow-fg}\n${message.content}\n\n`;
           break;
       }
     }
