@@ -16,6 +16,7 @@ KOTA-AI reimagines personal knowledge management by combining the power of moder
 - **🔄 Bidirectional Linking**: Create connections between knowledge entries for deeper insights
 - **🔍 Semantic Search**: Find what you need based on meaning, not just keywords
 - **🎨 Customizable UI**: Configure the chat interface appearance with YAML or JSON configuration files
+- **⚡ Terminal Command Execution**: Execute shell commands directly from the chat interface
 
 ## 🚀 Implementation Plan
 
@@ -47,6 +48,7 @@ KOTA-AI reimagines personal knowledge management by combining the power of moder
 - Create visualization components
 - Develop help and documentation
 - Implement configurable UI styling ✓
+- Add terminal command execution functionality ✓
 
 ## 📋 Commands
 
@@ -65,6 +67,7 @@ KOTA-AI reimagines personal knowledge management by combining the power of moder
 | `kota models`                   | List available models                    |
 | `kota select <model>`           | Select a model to use                    |
 | `kota config create`            | Create a default configuration file      |
+| `/run <command>`                | Execute a terminal command in chat       |
 
 ## 🧩 Project Structure
 
