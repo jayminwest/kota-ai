@@ -124,10 +124,12 @@ export class PersistentChatInterface {
   /**
    * Show MCP connection information
    */
+
+  /**
+   * Show MCP connection information
+   */
   private showMCPInfoBox(): void {
-    const connected = this.mcpManager.isConnected();
-    const server = this.mcpManager.getCurrentServer();
-    const capabilities = this.mcpManager.getServerCapabilities();
+    const connected = this.mcpManager.isConnectedToServer();
 
     const infoBox = blessed.box({
       top: 'center',
@@ -142,87 +144,32 @@ export class PersistentChatInterface {
         border: {
           fg: 'white',
         },
-        scrollbar: {
-          bg: 'blue',
-        },
       },
       label: ' MCP Connection Status ',
       scrollable: true,
-      alwaysScroll: true,
-      keys: true,
-      vi: true,
     });
 
-    let content = '';
-
-    if (connected && server) {
-      content += `{green-fg}✓ Connected{/green-fg} to MCP server: ${server.displayName || server.name}\n\n`;
-      
-      if (capabilities) {
-        content += 'Server capabilities:\n';
-        content += `• Protocol version: ${capabilities.version}\n`;
-        content += `• Server name: ${capabilities.serverInfo?.name || 'Unknown'}\n`;
-        content += `• Server version: ${capabilities.serverInfo?.version || 'Unknown'}\n\n`;
-
-        if (capabilities.supportedFeatures && capabilities.supportedFeatures.length > 0) {
-          content += 'Supported features:\n';
-          capabilities.supportedFeatures.forEach((feature: string) => {
-            content += `• ${feature}\n`;
-          });
-          content += '\n';
-        }
-
-        if (capabilities.supportedModels && capabilities.supportedModels.length > 0) {
-          content += 'Supported models:\n';
-          capabilities.supportedModels.forEach((model: any) => {
-            content += `• ${model.id} (${model.name || 'Unnamed'})\n`;
-          });
-        }
-      }
+    // Set content based on connection status
+    if (connected) {
+      infoBox.setContent(
+        '{green-fg}✓ Connected{/green-fg} to MCP server\n\n' +
+        'Your AI chat now has access to context from the MCP server.\n\n' +
+        'To disconnect from the MCP server, use the command:\n' +
+        '$ kota mcp disconnect'
+      );
     } else {
-      content += `{red-fg}✗ Not connected{/red-fg} to any MCP server\n\n`;
-      content += 'You can connect to an MCP server from the command line using:\n';
-      content += '$ kota mcp connect [server-name]\n\n';
-      content += 'To list available servers:\n';
-      content += '$ kota mcp list\n\n';
-      content += 'For more information about MCP commands:\n';
-      content += '$ kota help';
+      infoBox.setContent(
+        '{red-fg}✗ Not connected{/red-fg} to any MCP server\n\n' +
+        'You can connect to an MCP server from the command line using:\n' +
+        '$ kota mcp connect [server-name]\n\n' +
+        'To list available servers:\n' +
+        '$ kota mcp list\n\n' +
+        'For more information about MCP commands:\n' +
+        '$ kota help'
+      );
     }
 
-    infoBox.setContent(content);
-    
-    // Add a close button
-    const closeButton = blessed.button({
-      parent: infoBox,
-      bottom: 1,
-      left: 'center',
-      width: 10,
-      height: 3,
-      content: 'Close',
-      align: 'center',
-      valign: 'middle',
-      style: {
-        bg: 'blue',
-        fg: 'white',
-        focus: {
-          bg: 'cyan',
-        },
-        hover: {
-          bg: 'cyan',
-        },
-      },
-      border: {
-        type: 'line',
-      },
-    });
-
-    closeButton.on('press', () => {
-      this.screen.remove(infoBox);
-      this.screen.render();
-      this.inputBox.focus();
-    });
-
-    // Close on escape
+    // Close on escape key
     infoBox.key(['escape', 'q'], () => {
       this.screen.remove(infoBox);
       this.screen.render();
@@ -230,10 +177,8 @@ export class PersistentChatInterface {
     });
 
     this.screen.append(infoBox);
-    closeButton.focus();
     this.screen.render();
   }
-
   /**
    * Setup all exit handlers
    */
@@ -450,7 +395,7 @@ export class PersistentChatInterface {
    */
   private updateStatus(): void {
     const activeModel = getActiveModel();
-    let mcpStatus = this.mcpManager.isConnected() ? 
+    let mcpStatus = this.mcpManager.isConnectedToServer() ? 
       '{green-fg}MCP Connected{/green-fg}' : 
       '{gray-fg}MCP Disconnected{/gray-fg}';
       
