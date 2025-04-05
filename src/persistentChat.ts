@@ -22,6 +22,7 @@ export class PersistentChatInterface {
   private mcpManager: MCPManager = MCPManager.getInstance();
   private config: ChatInterfaceConfig;
   private exitConfirmationBox: blessed.Widgets.BoxElement | null = null;
+  private modelSelectionBox: blessed.Widgets.ListElement | null = null;
 
   constructor() {
     // Load configuration
@@ -92,8 +93,14 @@ export class PersistentChatInterface {
     // Add multiple exit methods
     this.setupExitHandlers();
 
+    // Setup model selection shortcut
     this.screen.key(['C-m'], () => {
       this.showModelSelection();
+    });
+
+    // Setup MCP connection information shortcut
+    this.screen.key(['C-p'], () => {
+      this.showMCPInfoBox();
     });
 
     this.inputBox.key('enter', async () => {
@@ -110,8 +117,121 @@ export class PersistentChatInterface {
     this.inputBox.focus();
 
     // Welcome message
-    this.addMessage('ai', 'Welcome to KOTA! How can I help you today?');
+    this.addMessage('ai', 'Welcome to KOTA! How can I help you today?\n\nTips:\n• Press Ctrl+M to select a different AI model\n• Press Ctrl+P to view MCP connection status\n• Type /exit or press ESC and confirm to exit');
     this.updateStatus();
+  }
+
+  /**
+   * Show MCP connection information
+   */
+  private showMCPInfoBox(): void {
+    const connected = this.mcpManager.isConnected();
+    const server = this.mcpManager.getCurrentServer();
+    const capabilities = this.mcpManager.getServerCapabilities();
+
+    const infoBox = blessed.box({
+      top: 'center',
+      left: 'center',
+      width: '70%',
+      height: '70%',
+      tags: true,
+      border: {
+        type: 'line',
+      },
+      style: {
+        border: {
+          fg: 'white',
+        },
+        scrollbar: {
+          bg: 'blue',
+        },
+      },
+      label: ' MCP Connection Status ',
+      scrollable: true,
+      alwaysScroll: true,
+      keys: true,
+      vi: true,
+    });
+
+    let content = '';
+
+    if (connected && server) {
+      content += `{green-fg}✓ Connected{/green-fg} to MCP server: ${server.displayName || server.name}\n\n`;
+      
+      if (capabilities) {
+        content += 'Server capabilities:\n';
+        content += `• Protocol version: ${capabilities.version}\n`;
+        content += `• Server name: ${capabilities.serverInfo?.name || 'Unknown'}\n`;
+        content += `• Server version: ${capabilities.serverInfo?.version || 'Unknown'}\n\n`;
+
+        if (capabilities.supportedFeatures && capabilities.supportedFeatures.length > 0) {
+          content += 'Supported features:\n';
+          capabilities.supportedFeatures.forEach((feature: string) => {
+            content += `• ${feature}\n`;
+          });
+          content += '\n';
+        }
+
+        if (capabilities.supportedModels && capabilities.supportedModels.length > 0) {
+          content += 'Supported models:\n';
+          capabilities.supportedModels.forEach((model: any) => {
+            content += `• ${model.id} (${model.name || 'Unnamed'})\n`;
+          });
+        }
+      }
+    } else {
+      content += `{red-fg}✗ Not connected{/red-fg} to any MCP server\n\n`;
+      content += 'You can connect to an MCP server from the command line using:\n';
+      content += '$ kota mcp connect [server-name]\n\n';
+      content += 'To list available servers:\n';
+      content += '$ kota mcp list\n\n';
+      content += 'For more information about MCP commands:\n';
+      content += '$ kota help';
+    }
+
+    infoBox.setContent(content);
+    
+    // Add a close button
+    const closeButton = blessed.button({
+      parent: infoBox,
+      bottom: 1,
+      left: 'center',
+      width: 10,
+      height: 3,
+      content: 'Close',
+      align: 'center',
+      valign: 'middle',
+      style: {
+        bg: 'blue',
+        fg: 'white',
+        focus: {
+          bg: 'cyan',
+        },
+        hover: {
+          bg: 'cyan',
+        },
+      },
+      border: {
+        type: 'line',
+      },
+    });
+
+    closeButton.on('press', () => {
+      this.screen.remove(infoBox);
+      this.screen.render();
+      this.inputBox.focus();
+    });
+
+    // Close on escape
+    infoBox.key(['escape', 'q'], () => {
+      this.screen.remove(infoBox);
+      this.screen.render();
+      this.inputBox.focus();
+    });
+
+    this.screen.append(infoBox);
+    closeButton.focus();
+    this.screen.render();
   }
 
   /**
@@ -326,11 +446,15 @@ export class PersistentChatInterface {
   }
 
   /**
-   * Update the status bar with current model info
+   * Update the status bar with current model and MCP info
    */
   private updateStatus(): void {
     const activeModel = getActiveModel();
-    let statusText = ` Model: ${activeModel.name} | Press Ctrl+C or type /exit to exit, Ctrl+M to change model, ESC for menu`;
+    let mcpStatus = this.mcpManager.isConnected() ? 
+      '{green-fg}MCP Connected{/green-fg}' : 
+      '{gray-fg}MCP Disconnected{/gray-fg}';
+      
+    let statusText = ` Model: ${activeModel.name} | ${mcpStatus} | Ctrl+M: Change Model | Ctrl+P: MCP Info | Ctrl+C/ESC: Exit`;
 
     // Add warning if no API key is set
     if (
@@ -445,8 +569,14 @@ export class PersistentChatInterface {
    * Show model selection dialog
    */
   private async showModelSelection(): Promise<void> {
+    // Close any existing model selection
+    if (this.modelSelectionBox) {
+      this.screen.remove(this.modelSelectionBox);
+      this.modelSelectionBox = null;
+    }
+
     // Create modal list
-    const list = blessed.list({
+    this.modelSelectionBox = blessed.list({
       top: 'center',
       left: 'center',
       width: '70%',
@@ -458,60 +588,139 @@ export class PersistentChatInterface {
       style: {
         selected: {
           bg: 'blue',
+          fg: 'white',
+          bold: true,
         },
         border: {
           fg: 'white',
         },
+        scrollbar: {
+          bg: 'blue',
+        },
       },
-      label: ' Select a model ',
+      label: ' Select AI Model ',
       scrollable: true,
       keys: true,
       vi: true,
     });
 
+    // Add a header with instructions
+    const header = blessed.box({
+      parent: this.modelSelectionBox,
+      top: 0,
+      left: 0,
+      width: '100%-2',
+      height: 3,
+      content: '{center}Select a model and press Enter, or press Escape to cancel{/center}',
+      tags: true,
+      style: {
+        fg: 'white',
+        bg: 'blue',
+      },
+    });
+
+    // Adjust list position below header
+    this.modelSelectionBox.top = 3;
+    this.modelSelectionBox.height = '100%-6';
+
     // Try to refresh models
     try {
       this.availableModels = await getAvailableModels();
+
+      // Group models by provider
+      const anthropicModels = this.availableModels.filter(
+        model => model.provider === ModelProvider.ANTHROPIC
+      );
+      const ollamaModels = this.availableModels.filter(
+        model => model.provider === ModelProvider.OLLAMA
+      );
+
+      // Add models to list with grouping
+      const activeModel = getActiveModel();
+      let items: string[] = [];
+
+      if (anthropicModels.length > 0) {
+        items.push('{bold}─── Anthropic Claude Models ───{/bold}');
+        anthropicModels.forEach(model => {
+          let label = `  ${model.name}`;
+          if (model.id === activeModel.id) {
+            label = `  {green-fg}${model.name} ✓{/green-fg}`;
+          }
+          items.push(label);
+        });
+      }
+
+      if (ollamaModels.length > 0) {
+        items.push('{bold}─── Local Ollama Models ───{/bold}');
+        ollamaModels.forEach(model => {
+          let label = `  ${model.name}`;
+          if (model.id === activeModel.id) {
+            label = `  {green-fg}${model.name} ✓{/green-fg}`;
+          }
+          items.push(label);
+        });
+      }
+
+      this.modelSelectionBox.setItems(items);
+
+      // Map selection index back to model index
+      const modelMap = new Map<number, ModelConfig>();
+      let listIndex = 0;
+      
+      // Skip header items
+      anthropicModels.length > 0 && listIndex++;
+      anthropicModels.forEach(model => {
+        modelMap.set(listIndex++, model);
+      });
+      
+      ollamaModels.length > 0 && listIndex++;
+      ollamaModels.forEach(model => {
+        modelMap.set(listIndex++, model);
+      });
+
+      // Handle selection
+      this.modelSelectionBox.on('select', (_, index) => {
+        const selectedModel = modelMap.get(index);
+        if (selectedModel) {
+          setActiveModel(selectedModel.id);
+          this.updateStatus();
+          this.addMessage('ai', `Model changed to ${selectedModel.name}`);
+        }
+
+        // Remove list and render screen
+        if (this.modelSelectionBox) {
+          this.screen.remove(this.modelSelectionBox);
+          this.modelSelectionBox = null;
+        }
+        this.screen.render();
+        this.inputBox.focus();
+      });
     } catch (error) {
       console.error('Failed to refresh models:', error);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      
+      // Show error message in the list
+      this.modelSelectionBox.setItems([
+        '{red-fg}Error loading models:{/red-fg}',
+        `  ${errorMsg}`,
+        '',
+        '{bold}Press Escape to close{/bold}'
+      ]);
     }
 
-    // Add models to list
-    const activeModel = getActiveModel();
-    const items = this.availableModels.map((model) => {
-      let label = model.name;
-      if (model.id === activeModel.id) {
-        label = '{green-fg}' + label + ' (active){/green-fg}';
+    // Handle escape
+    this.modelSelectionBox.key(['escape', 'q'], () => {
+      if (this.modelSelectionBox) {
+        this.screen.remove(this.modelSelectionBox);
+        this.modelSelectionBox = null;
       }
-      return label;
+      this.screen.render();
+      this.inputBox.focus();
     });
-    list.setItems(items);
 
     // Add list to screen
-    this.screen.append(list);
-    list.focus();
-
-    // Handle selection
-    list.on('select', async (_, index) => {
-      const selectedModel = this.availableModels[index];
-      if (selectedModel) {
-        setActiveModel(selectedModel.id);
-        this.updateStatus();
-      }
-
-      // Remove list and render screen
-      list.detach();
-      this.screen.render();
-      this.inputBox.focus();
-    });
-
-    // Handle escape
-    list.key(['escape', 'q'], () => {
-      list.detach();
-      this.screen.render();
-      this.inputBox.focus();
-    });
-
+    this.screen.append(this.modelSelectionBox);
+    this.modelSelectionBox.focus();
     this.screen.render();
   }
 }
