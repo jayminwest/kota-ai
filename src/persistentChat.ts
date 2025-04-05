@@ -3,6 +3,23 @@ import { execCommand } from './commands.js';
 import { AnthropicService } from './anthropicService.js';
 import { MCPManager } from './mcpManager.js';
 import { loadChatConfig, ChatInterfaceConfig } from './config.js';
+import { exec } from 'node:child_process';
+import { promisify } from 'node:util';
+
+const execPromise = promisify(exec);
+
+// Set a reasonable timeout for terminal commands (in milliseconds)
+const TERMINAL_COMMAND_TIMEOUT = 30000; // 30 seconds
+
+// List of potentially dangerous commands or command segments that should be blocked
+const DANGEROUS_COMMANDS = [
+  'rm -rf', 'rm -r /', 'rm -f /', 'rm /', 
+  'mkfs', 'dd if=', 'format',
+  '> /etc/', '> /dev/', '> /var/', '> /boot/',
+  ':(){:|:&};:', 'fork bomb', 
+  'shutdown', 'reboot', 'halt', 'poweroff',
+  'mv / /dev/null'
+];
 
 interface ChatMessage {
   content: string;
@@ -131,6 +148,9 @@ export class PersistentChatInterface {
     this.addSystemMessage(
       'MCP commands: /run mcp connect <path>, /run mcp disconnect, /run mcp status'
     );
+    this.addSystemMessage(
+      'Terminal commands: /run terminal <command> or /run term <command> (use -a flag to include output in conversation context)'
+    );
   }
 
   // Clean up resources and exit
@@ -174,21 +194,60 @@ export class PersistentChatInterface {
   // Process the user input
   private async processInput(input: string): Promise<void> {
     if (input.startsWith('/run ')) {
-      // Handle command
-      const command = input.substring(5).trim();
-      this.addSystemMessage(`Executing command: ${command}`);
+      // Extract the command part
+      const commandPart = input.substring(5).trim();
+      
+      // Check if it's a terminal command
+      if (commandPart.startsWith('terminal ') || commandPart.startsWith('term ')) {
+        // Extract the actual terminal command and any flags
+        const terminalCommandPart = commandPart.startsWith('terminal ') 
+          ? commandPart.substring(9).trim() 
+          : commandPart.substring(5).trim();
+        
+        // Check if -a flag is present to include in conversation context
+        const includeInContext = terminalCommandPart.includes(' -a') || terminalCommandPart.startsWith('-a ');
+        // Remove the -a flag from the command if present
+        const cleanCommand = terminalCommandPart
+          .replace(/\s+-a(\s|$)/, ' ')
+          .replace(/^-a\s+/, '')
+          .trim();
+        
+        this.addSystemMessage(`Executing terminal command: ${cleanCommand}`);
+        
+        try {
+          const result = await this.executeTerminalCommand(cleanCommand);
+          const outputMessage = `Terminal output:\n${result || 'Command executed successfully with no output.'}`;
+          
+          this.addSystemMessage(outputMessage);
+          
+          // If -a flag was provided, add this to the AI's conversation context
+          if (includeInContext && this.anthropicService) {
+            const contextMessage = `I ran this terminal command: \`${cleanCommand}\`\n\nThe output was:\n\`\`\`\n${result}\n\`\`\``;
+            this.addUserMessage(contextMessage);
+          }
+        } catch (error) {
+          this.addSystemMessage(
+            `Error executing terminal command: ${
+              error instanceof Error ? error.message : String(error)
+            }`
+          );
+        }
+      } else {
+        // Handle regular KOTA command
+        this.addSystemMessage(`Executing command: ${commandPart}`);
 
-      try {
-        const result = await this.executeCommand(command.split(' '));
-        this.addSystemMessage(
-          `Command output:\n${result || 'Command executed successfully.'}`
-        );
-      } catch (error) {
-        this.addSystemMessage(
-          `Error executing command: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
+        try {
+          const result = await this.executeCommand(commandPart.split(' '));
+          this.addSystemMessage(
+            `Command output:\n${result || 'Command executed successfully.'}`
+          );
+        } catch (error) {
+          this.addSystemMessage(
+            `Error executing command: ${
+              error instanceof Error ? error.message : String(error)
+            }`
+          );
+        }
       }
     } else {
       // Handle chat message
@@ -221,6 +280,52 @@ export class PersistentChatInterface {
     }
 
     this.screen.render();
+  }
+
+  // Execute a terminal command and return its output
+  private async executeTerminalCommand(command: string): Promise<string> {
+    // Check for potentially dangerous commands
+    for (const dangerousCommand of DANGEROUS_COMMANDS) {
+      if (command.toLowerCase().includes(dangerousCommand.toLowerCase())) {
+        throw new Error(
+          `Command rejected for security reasons. The command contains '${dangerousCommand}' which could be dangerous.`
+        );
+      }
+    }
+
+    try {
+      // Execute the command with a timeout
+      const { stdout, stderr } = await Promise.race([
+        execPromise(command),
+        new Promise<never>((_, reject) => {
+          setTimeout(() => {
+            reject(new Error(`Command timed out after ${TERMINAL_COMMAND_TIMEOUT / 1000} seconds`));
+          }, TERMINAL_COMMAND_TIMEOUT);
+        }),
+      ]);
+
+      // Combine stdout and stderr
+      let output = '';
+      if (stdout) output += stdout;
+      if (stderr) output += `\nSTDERR: ${stderr}`;
+      
+      return output.trim();
+    } catch (error) {
+      if (error instanceof Error) {
+        // Handle specific error types with more user-friendly messages
+        if (error.message.includes('command not found')) {
+          throw new Error(`Command not found: ${command}. Please check that the command is installed and spelled correctly.`);
+        } else if (error.message.includes('permission denied')) {
+          throw new Error(`Permission denied for command: ${command}. Try using sudo or check file permissions.`);
+        } else if (error.message.includes('timed out')) {
+          throw new Error(`Command execution timed out: ${command}. The command took too long to complete.`);
+        }
+        
+        // Pass through the actual error
+        throw error;
+      }
+      throw new Error(`Unknown error executing terminal command: ${String(error)}`);
+    }
   }
 
   // Execute a command and capture its output
