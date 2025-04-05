@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { AnthropicService } from './anthropicService.js';
 import { MCPManager } from './mcpManager.js';
 import {
   connectMCPServer,
@@ -12,6 +11,12 @@ import {
   setDefaultMCPServer,
   showMCPStatus,
 } from './mcp/commands.js';
+import {
+  chatWithModel,
+  listModels,
+  setActiveModel,
+  getActiveModel,
+} from './model-commands.js';
 
 const KOTA_DIR_NAME = '.kota-ai';
 const NOTES_DIR_NAME = 'notes';
@@ -52,55 +57,32 @@ function initializeKota(): void {
   }
 }
 
-async function chatWithAI(message: string): Promise<void> {
-  try {
-    const anthropicService = AnthropicService.getInstance();
-
-    console.log('AI: Thinking...');
-
-    // For non-streaming version, we'd use a callback to get the final response
-    let responseAccumulator = '';
-
-    await anthropicService.chatWithAI(
-      message,
-      (chunk) => {
-        // In non-interactive mode, we accumulate the response but don't stream to console
-        responseAccumulator += chunk;
-      },
-      () => {
-        // Once complete, display the full response
-        console.log(`AI: ${responseAccumulator}`);
-      }
-    );
-  } catch (error) {
-    console.error('Error communicating with AI:', error);
-  }
-}
-
 function showHelp(): void {
   console.log('Usage: kota <command>');
   console.log('\nAvailable commands:');
   console.log('  init                    Initialize KOTA directories');
   console.log('  chat <message>          Chat with KOTA AI');
+  console.log('  model list              List available AI models');
+  console.log('  model use <model-id>    Set the active AI model');
   console.log('  mcp connect <path>      Connect to MCP server');
   console.log('  mcp disconnect          Disconnect from MCP server');
   console.log('  mcp status              Check MCP connection status');
   console.log('  help                    Show this help information');
-  console.log('  init           Initialize KOTA directories');
-  console.log('  chat <message> Chat with KOTA AI');
-  console.log('  help           Show this help information');
   console.log('\nMCP Commands:');
   console.log('  mcp connect [name]      Connect to an MCP server');
   console.log(
     '  mcp disconnect          Disconnect from the current MCP server'
   );
   console.log('  mcp list                List available MCP servers');
-  console.log('  mcp add <name> <type>   Add a new MCP server configuration');
-  console.log('  mcp remove <name>       Remove an MCP server configuration');
-  console.log('  mcp default <name>      Set the default MCP server');
+  console.log('  mcp add <n> <type>   Add a new MCP server configuration');
+  console.log('  mcp remove <n>       Remove an MCP server configuration');
+  console.log('  mcp default <n>      Set the default MCP server');
   console.log(
     '  mcp status              Show the status of the current MCP connection'
   );
+  console.log('\nModel Commands:');
+  console.log('  model list              List available AI models');
+  console.log('  model use <model-id>    Set the active AI model');
 }
 
 /**
@@ -126,7 +108,11 @@ export async function execCommand(args: string[]): Promise<void> {
         console.error('Please provide a message to chat with the AI.');
         break;
       }
-      await chatWithAI(commandArgs.join(' '));
+      // Use the model-commands chatWithModel function
+      await chatWithModel(commandArgs.join(' '));
+      break;
+    case 'model':
+      await handleModelCommands(commandArgs);
       break;
     case 'mcp':
       await handleMCPCommands(commandArgs);
@@ -134,50 +120,50 @@ export async function execCommand(args: string[]): Promise<void> {
     case 'help':
       showHelp();
       break;
-    case 'mcp':
-      if (commandArgs.length === 0) {
-        console.error('Please provide an MCP subcommand.');
-        console.log(
-          'Available MCP subcommands: connect, disconnect, list, add, remove, default, status'
-        );
-        break;
-      }
-
-      const mcpSubcommand = commandArgs[0];
-      const mcpArgs = commandArgs.slice(1);
-
-      switch (mcpSubcommand) {
-        case 'connect':
-          await connectMCPServer(mcpArgs);
-          break;
-        case 'disconnect':
-          await disconnectMCPServer();
-          break;
-        case 'list':
-          listMCPServers();
-          break;
-        case 'add':
-          addMCPServer(mcpArgs);
-          break;
-        case 'remove':
-          removeMCPServer(mcpArgs);
-          break;
-        case 'default':
-          setDefaultMCPServer(mcpArgs);
-          break;
-        case 'status':
-          showMCPStatus();
-          break;
-        default:
-          console.error(`Unknown MCP subcommand: ${mcpSubcommand}`);
-          console.log(
-            'Available MCP subcommands: connect, disconnect, list, add, remove, default, status'
-          );
-      }
-      break;
     default:
       console.error(`Unknown command: ${command}`);
       showHelp();
+  }
+}
+
+/**
+ * Handle model-related commands
+ * @param args Command arguments
+ */
+async function handleModelCommands(args: string[]): Promise<void> {
+  if (args.length === 0) {
+    console.error(
+      'Please specify a model command: list, use'
+    );
+    return;
+  }
+
+  const subCommand = args[0];
+
+  switch (subCommand) {
+    case 'list':
+      await listModels();
+      break;
+    case 'use':
+      if (args.length < 2) {
+        console.error('Please provide a model ID');
+        console.log('Use "kota model list" to see available models');
+        return;
+      }
+
+      const modelId = args[1];
+      if (setActiveModel(modelId)) {
+        const model = getActiveModel();
+        console.log(`Active model set to ${model.id} (${model.name})`);
+      } else {
+        console.error(`Model with ID "${modelId}" not found`);
+        console.log('Use "kota model list" to see available models');
+      }
+      break;
+    default:
+      console.error(
+        `Unknown model command: ${subCommand}. Valid options are: list, use`
+      );
   }
 }
 
@@ -188,50 +174,40 @@ export async function execCommand(args: string[]): Promise<void> {
 async function handleMCPCommands(args: string[]): Promise<void> {
   if (args.length === 0) {
     console.error(
-      'Please specify an MCP command: connect, disconnect, or status'
+      'Please specify an MCP command: connect, disconnect, list, add, remove, default, status'
     );
     return;
   }
 
-  const mcpManager = MCPManager.getInstance();
   const subCommand = args[0];
+  const mcpArgs = args.slice(1);
 
   switch (subCommand) {
-    case 'connect': {
-      if (args.length < 2) {
-        console.error('Please provide a path to the MCP server');
-        return;
-      }
-      try {
-        const mcpPath = args[1];
-        const result = await mcpManager.connect(mcpPath);
-        console.log(result);
-      } catch (error) {
-        console.error(
-          'Failed to connect to MCP server:',
-          error instanceof Error ? error.message : String(error)
-        );
-      }
+    case 'connect':
+      await connectMCPServer(mcpArgs);
       break;
-    }
-
-    case 'disconnect': {
-      const result = mcpManager.disconnect();
-      console.log(result);
+    case 'disconnect':
+      await disconnectMCPServer();
       break;
-    }
-
-    case 'status': {
-      const isConnected = mcpManager.isConnectedToServer();
-      console.log(
-        isConnected ? 'MCP Status: Connected' : 'MCP Status: Not connected'
-      );
+    case 'list':
+      listMCPServers();
       break;
-    }
-
+    case 'add':
+      addMCPServer(mcpArgs);
+      break;
+    case 'remove':
+      removeMCPServer(mcpArgs);
+      break;
+    case 'default':
+      setDefaultMCPServer(mcpArgs);
+      break;
+    case 'status':
+      showMCPStatus();
+      break;
     default:
-      console.error(
-        `Unknown MCP command: ${subCommand}. Valid options are: connect, disconnect, status`
+      console.error(`Unknown MCP subcommand: ${subCommand}`);
+      console.log(
+        'Available MCP subcommands: connect, disconnect, list, add, remove, default, status'
       );
   }
 }
