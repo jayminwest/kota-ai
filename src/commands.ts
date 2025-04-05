@@ -11,7 +11,7 @@ import {
   removeMCPServer,
   setDefaultMCPServer,
   showMCPStatus,
-  importMCPServers,
+  importMCPServers as importMCPServersFromFile,
 } from './mcp/commands.js';
 import {
   chatWithModel,
@@ -239,7 +239,7 @@ async function handleMCPCommands(args: string[]): Promise<void> {
     }
 
     case 'import': {
-      await importMCPServers(subCommandArgs);
+      await importMCPServersFromFile(subCommandArgs);
       break;
     }
 
