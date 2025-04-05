@@ -1,41 +1,23 @@
-import blessed from 'blessed';
-import { execCommand } from './commands.js';
-import { AnthropicService } from './anthropicService.js';
+import * as blessed from 'blessed';
+import {
+  chatWithModel,
+  getActiveModel,
+  listModels,
+  setActiveModel,
+  ModelConfig,
+  getAvailableModels,
+} from './model-commands.js';
 import { MCPManager } from './mcpManager.js';
 import { loadChatConfig, ChatInterfaceConfig } from './config.js';
-import { exec } from 'node:child_process';
-import { promisify } from 'node:util';
-
-const execPromise = promisify(exec);
-
-// Set a reasonable timeout for terminal commands (in milliseconds)
-const TERMINAL_COMMAND_TIMEOUT = 30000; // 30 seconds
-
-// List of potentially dangerous commands or command segments that should be blocked
-const DANGEROUS_COMMANDS = [
-  'rm -rf', 'rm -r /', 'rm -f /', 'rm /', 
-  'mkfs', 'dd if=', 'format',
-  '> /etc/', '> /dev/', '> /var/', '> /boot/',
-  ':(){:|:&};:', 'fork bomb', 
-  'shutdown', 'reboot', 'halt', 'poweroff',
-  'mv / /dev/null'
-];
-
-interface ChatMessage {
-  content: string;
-  sender: 'user' | 'assistant' | 'system';
-  timestamp: Date;
-}
 
 export class PersistentChatInterface {
   private screen: blessed.Widgets.Screen;
   private chatBox: blessed.Widgets.BoxElement;
   private inputBox: blessed.Widgets.TextareaElement;
   private statusBar: blessed.Widgets.BoxElement;
-  private messageHistory: ChatMessage[] = [];
-  private inputHistory: string[] = [];
-  private inputHistoryIndex: number = -1;
-  private anthropicService: AnthropicService | null = null;
+  private chatHistory: { role: 'user' | 'ai'; content: string }[] = [];
+  private isProcessing = false;
+  private availableModels: ModelConfig[] = [];
   private mcpManager: MCPManager = MCPManager.getInstance();
   private config: ChatInterfaceConfig;
 
@@ -43,421 +25,298 @@ export class PersistentChatInterface {
     // Load configuration
     this.config = loadChatConfig();
 
-    // Initialize the blessed screen
+    // Initialize blessed screen
     this.screen = blessed.screen({
       smartCSR: true,
-      title: 'KOTA AI Chat Interface',
+      title: 'KOTA - Knowledge Oriented Thinking Assistant',
     });
 
-    // Create the chat message display box
+    // Create chat box for displaying conversation
     this.chatBox = blessed.box({
       top: 0,
       left: 0,
       width: '100%',
-      height: this.config.layout.chatBoxHeight,
-      tags: true,
+      height: this.config.layout.chatBoxHeight || '90%',
       scrollable: true,
       alwaysScroll: true,
-      scrollbar: {
-        ch: ' ',
-        track: {
-          bg: this.config.layout.scrollbarStyle.trackBg,
-        },
-        style: {
-          inverse: true,
-        },
-      },
+      tags: true,
       border: {
         type: 'line',
       },
       style: {
         border: {
-          fg: this.config.colors.border,
+          fg: this.config.colors.border || 'blue',
         },
       },
     });
 
-    // Create the input box
+    // Create input box for user messages
     this.inputBox = blessed.textarea({
       bottom: 1,
       left: 0,
       width: '100%',
-      height: this.config.layout.inputBoxHeight,
-      inputOnFocus: true,
+      height: this.config.layout.inputBoxHeight || '10%',
       border: {
         type: 'line',
       },
       style: {
         border: {
-          fg: this.config.colors.border,
+          fg: this.config.colors.border || 'blue',
         },
       },
+      inputOnFocus: true,
     });
 
-    // Create the status bar
+    // Create status bar
     this.statusBar = blessed.box({
       bottom: 0,
       left: 0,
       width: '100%',
       height: 1,
+      content: ' Press Ctrl+C to exit, Ctrl+M to change model',
       tags: true,
-      content: this.config.labels.statusBar,
       style: {
-        fg: this.config.colors.statusBar.foreground,
-        bg: this.config.colors.statusBar.background,
+        fg: this.config.colors.statusBar.foreground || 'white',
+        bg: this.config.colors.statusBar.background || 'blue',
       },
     });
 
-    // Add the components to the screen
+    // Add elements to screen
     this.screen.append(this.chatBox);
     this.screen.append(this.inputBox);
     this.screen.append(this.statusBar);
 
-    // Handle key events
-    this.inputBox.key(['enter'], () => this.handleInput());
-    this.inputBox.key(['up'], () => this.navigateInputHistory('up'));
-    this.inputBox.key(['down'], () => this.navigateInputHistory('down'));
+    // Key bindings
+    this.screen.key(['C-c'], () => {
+      this.cleanupAndExit();
+    });
 
-    // Add Ctrl+C handler to inputBox to ensure it works when input has focus
-    this.inputBox.key(['C-c'], () => this.cleanupAndExit());
+    this.screen.key(['C-m'], () => {
+      this.showModelSelection();
+    });
 
-    // Exit on Escape, Control-C, or q
-    this.screen.key(['escape', 'C-c', 'q'], () => this.cleanupAndExit());
+    this.inputBox.key('enter', async () => {
+      await this.handleUserInput();
+    });
 
-    // Focus the input box by default
+    // Focus input
     this.inputBox.focus();
 
-    // Initialize Anthropic service if API key is available
-    try {
-      this.anthropicService = AnthropicService.getInstance();
-    } catch (error) {
-      this.addSystemMessage(
-        `Error initializing Anthropic service: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-      this.addSystemMessage(
-        'Please set the ANTHROPIC_API_KEY environment variable to use AI chat functionality.'
-      );
-    }
-
-    // Display welcome message
-    this.addSystemMessage(
-      'Welcome to KOTA AI! Type a message to chat with Claude or use /run followed by a command to execute KOTA commands.'
-    );
-    this.addSystemMessage(
-      'MCP commands: /run mcp connect <path>, /run mcp disconnect, /run mcp status'
-    );
-    this.addSystemMessage(
-      'Terminal commands: /run terminal <command> or /run term <command> (use -a flag to include output in conversation context)'
-    );
+    // Welcome message
+    this.addMessage('ai', 'Welcome to KOTA! How can I help you today?');
+    this.updateStatus();
   }
 
-  // Clean up resources and exit
+  /**
+   * Clean up resources and exit
+   */
   private cleanupAndExit(): void {
     // Ensure MCP server is disconnected
     this.mcpManager.disconnect();
     process.exit(0);
   }
 
-  // Start the chat interface
-  public start(): void {
-    this.screen.render();
-  }
-
-  // Handle user input
-  private handleInput(): void {
-    const input = this.inputBox.getValue().trim();
-
-    if (input === '') return;
-
-    // Add to input history
-    this.inputHistory.unshift(input);
-    if (this.inputHistory.length > 50) {
-      this.inputHistory.pop();
-    }
-    this.inputHistoryIndex = -1;
-
-    // Clear the input box
-    this.inputBox.setValue('');
-
-    // Add user message to chat
-    this.addUserMessage(input);
-
-    // Process the input
-    this.processInput(input);
-
-    // Render the screen
-    this.screen.render();
-  }
-
-  // Process the user input
-  private async processInput(input: string): Promise<void> {
-    if (input.startsWith('/run ')) {
-      // Extract the command part
-      const commandPart = input.substring(5).trim();
-      
-      // Check if it's a terminal command
-      if (commandPart.startsWith('terminal ') || commandPart.startsWith('term ')) {
-        // Extract the actual terminal command and any flags
-        const terminalCommandPart = commandPart.startsWith('terminal ') 
-          ? commandPart.substring(9).trim() 
-          : commandPart.substring(5).trim();
-        
-        // Check if -a flag is present to include in conversation context
-        const includeInContext = terminalCommandPart.includes(' -a') || terminalCommandPart.startsWith('-a ');
-        // Remove the -a flag from the command if present
-        const cleanCommand = terminalCommandPart
-          .replace(/\s+-a(\s|$)/, ' ')
-          .replace(/^-a\s+/, '')
-          .trim();
-        
-        this.addSystemMessage(`Executing terminal command: ${cleanCommand}`);
-        
-        try {
-          const result = await this.executeTerminalCommand(cleanCommand);
-          const outputMessage = `Terminal output:\n${result || 'Command executed successfully with no output.'}`;
-          
-          this.addSystemMessage(outputMessage);
-          
-          // If -a flag was provided, add this to the AI's conversation context
-          if (includeInContext && this.anthropicService) {
-            const contextMessage = `I ran this terminal command: \`${cleanCommand}\`\n\nThe output was:\n\`\`\`\n${result}\n\`\`\``;
-            this.addUserMessage(contextMessage);
-          }
-        } catch (error) {
-          this.addSystemMessage(
-            `Error executing terminal command: ${
-              error instanceof Error ? error.message : String(error)
-            }`
-          );
-        }
-      } else {
-        // Handle regular KOTA command
-        this.addSystemMessage(`Executing command: ${commandPart}`);
-
-        try {
-          const result = await this.executeCommand(commandPart.split(' '));
-          this.addSystemMessage(
-            `Command output:\n${result || 'Command executed successfully.'}`
-          );
-        } catch (error) {
-          this.addSystemMessage(
-            `Error executing command: ${
-              error instanceof Error ? error.message : String(error)
-            }`
-          );
-        }
-      }
-    } else {
-      // Handle chat message
-      if (!this.anthropicService) {
-        this.addSystemMessage(
-          'Anthropic service is not initialized. Please set the ANTHROPIC_API_KEY environment variable.'
-        );
-        return;
-      }
-
-      this.addAssistantMessage('Thinking...');
-
-      try {
-        await this.anthropicService.chatWithAI(
-          input,
-          (chunk) => {
-            this.updateLastAssistantMessage((existing) => existing + chunk);
-            this.screen.render();
-          },
-          () => {
-            // When streaming is complete, do nothing special
-            this.screen.render();
-          }
-        );
-      } catch (error) {
-        this.addSystemMessage(
-          `Error: ${error instanceof Error ? error.message : String(error)}`
-        );
-      }
-    }
-
-    this.screen.render();
-  }
-
-  // Execute a terminal command and return its output
-  private async executeTerminalCommand(command: string): Promise<string> {
-    // Check for potentially dangerous commands
-    for (const dangerousCommand of DANGEROUS_COMMANDS) {
-      if (command.toLowerCase().includes(dangerousCommand.toLowerCase())) {
-        throw new Error(
-          `Command rejected for security reasons. The command contains '${dangerousCommand}' which could be dangerous.`
-        );
-      }
-    }
-
+  /**
+   * Start the chat interface
+   */
+  public async start(): Promise<void> {
+    // Load available models
     try {
-      // Execute the command with a timeout
-      const { stdout, stderr } = await Promise.race([
-        execPromise(command),
-        new Promise<never>((_, reject) => {
-          setTimeout(() => {
-            reject(new Error(`Command timed out after ${TERMINAL_COMMAND_TIMEOUT / 1000} seconds`));
-          }, TERMINAL_COMMAND_TIMEOUT);
-        }),
-      ]);
-
-      // Combine stdout and stderr
-      let output = '';
-      if (stdout) output += stdout;
-      if (stderr) output += `\nSTDERR: ${stderr}`;
-      
-      return output.trim();
+      this.availableModels = await getAvailableModels();
+      this.updateStatus();
+      this.screen.render();
     } catch (error) {
-      if (error instanceof Error) {
-        // Handle specific error types with more user-friendly messages
-        if (error.message.includes('command not found')) {
-          throw new Error(`Command not found: ${command}. Please check that the command is installed and spelled correctly.`);
-        } else if (error.message.includes('permission denied')) {
-          throw new Error(`Permission denied for command: ${command}. Try using sudo or check file permissions.`);
-        } else if (error.message.includes('timed out')) {
-          throw new Error(`Command execution timed out: ${command}. The command took too long to complete.`);
-        }
-        
-        // Pass through the actual error
-        throw error;
-      }
-      throw new Error(`Unknown error executing terminal command: ${String(error)}`);
-    }
-  }
-
-  // Execute a command and capture its output
-  private async executeCommand(args: string[]): Promise<string> {
-    // Capture console output
-    let output = '';
-    const originalConsoleLog = console.log;
-    const originalConsoleError = console.error;
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    console.log = (...args: any[]) => {
-      output += args.join(' ') + '\n';
-    };
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    console.error = (...args: any[]) => {
-      output += 'ERROR: ' + args.join(' ') + '\n';
-    };
-
-    try {
-      // Execute the command
-      await execCommand(args);
-      return output.trim();
-    } finally {
-      // Restore console methods
-      console.log = originalConsoleLog;
-      console.error = originalConsoleError;
-    }
-  }
-
-  // Navigate through input history
-  private navigateInputHistory(direction: 'up' | 'down'): void {
-    if (this.inputHistory.length === 0) return;
-
-    if (direction === 'up') {
-      this.inputHistoryIndex = Math.min(
-        this.inputHistoryIndex + 1,
-        this.inputHistory.length - 1
-      );
-    } else {
-      this.inputHistoryIndex = Math.max(this.inputHistoryIndex - 1, -1);
+      this.addMessage('ai', `Error loading models: ${error}`);
     }
 
-    if (this.inputHistoryIndex === -1) {
-      this.inputBox.setValue('');
-    } else {
-      this.inputBox.setValue(this.inputHistory[this.inputHistoryIndex]);
-    }
-
+    // Render the interface
     this.screen.render();
   }
 
-  // Add a user message to the chat
-  private addUserMessage(content: string): void {
-    const message: ChatMessage = {
-      content,
-      sender: 'user',
-      timestamp: new Date(),
-    };
+  /**
+   * Add a message to the chat box
+   */
+  private addMessage(role: 'user' | 'ai', content: string): void {
+    // Add to history
+    this.chatHistory.push({ role, content });
 
-    this.messageHistory.push(message);
-    this.updateChatBox();
+    // Format and display message
+    const prefix = role === 'user' ? '{green-fg}You:{/green-fg} ' : '{yellow-fg}AI:{/yellow-fg} ';
+    const formattedMessage = prefix + content;
+
+    // Append to chat box
+    if (this.chatBox.getContent()) {
+      this.chatBox.setContent(this.chatBox.getContent() + '\n\n' + formattedMessage);
+    } else {
+      this.chatBox.setContent(formattedMessage);
+    }
+
+    // Scroll to bottom
+    this.chatBox.setScrollPerc(100);
+    this.screen.render();
   }
 
-  // Add an assistant message to the chat
-  private addAssistantMessage(content: string): void {
-    const message: ChatMessage = {
-      content,
-      sender: 'assistant',
-      timestamp: new Date(),
-    };
-
-    this.messageHistory.push(message);
-    this.updateChatBox();
+  /**
+   * Update the status bar with current model info
+   */
+  private updateStatus(): void {
+    const activeModel = getActiveModel();
+    this.statusBar.setContent(
+      ` Model: ${activeModel.name} | Press Ctrl+C to exit, Ctrl+M to change model`
+    );
+    this.screen.render();
   }
 
-  // Update the last assistant message (used for updating "thinking" states and streaming)
-  private updateLastAssistantMessage(
-    contentUpdater: string | ((existing: string) => string)
-  ): void {
-    // Find the last assistant message
-    for (let i = this.messageHistory.length - 1; i >= 0; i--) {
-      if (this.messageHistory[i].sender === 'assistant') {
-        if (typeof contentUpdater === 'string') {
-          this.messageHistory[i].content = contentUpdater;
-        } else {
-          this.messageHistory[i].content = contentUpdater(
-            this.messageHistory[i].content
-          );
+  /**
+   * Handle user input from the input box
+   */
+  private async handleUserInput(): Promise<void> {
+    if (this.isProcessing) return;
+
+    const message = this.inputBox.getValue();
+    if (!message.trim()) return;
+
+    // Clear input box
+    this.inputBox.setValue('');
+    this.screen.render();
+
+    // Display user message
+    this.addMessage('user', message);
+
+    this.isProcessing = true;
+    // Show thinking message
+    this.statusBar.setContent(' AI is thinking...');
+    this.screen.render();
+
+    try {
+      let response = '';
+      
+      await chatWithModel(
+        message,
+        getActiveModel(),
+        (chunk) => {
+          // Add to response
+          response += chunk;
+          
+          // Update chatBox with current response
+          const lastMsgIdx = this.chatHistory.length;
+          if (lastMsgIdx > 0 && this.chatHistory[lastMsgIdx - 1].role === 'ai') {
+            // Update the existing AI message
+            this.chatHistory[lastMsgIdx - 1].content = response;
+          } else {
+            // Add a new AI message
+            this.chatHistory.push({ role: 'ai', content: response });
+          }
+          
+          // Redraw chat
+          this.renderChatHistory();
+        },
+        () => {
+          // When complete, add the message to history if not already added
+          if (this.chatHistory.length === 0 || this.chatHistory[this.chatHistory.length - 1].role !== 'ai') {
+            this.addMessage('ai', response);
+          }
+          this.isProcessing = false;
+          this.updateStatus();
         }
-        this.updateChatBox();
-        break;
-      }
+      );
+    } catch (error) {
+      this.addMessage('ai', `Error: ${error instanceof Error ? error.message : String(error)}`);
+      this.isProcessing = false;
+      this.updateStatus();
     }
   }
 
-  // Add a system message to the chat
-  private addSystemMessage(content: string): void {
-    const message: ChatMessage = {
-      content,
-      sender: 'system',
-      timestamp: new Date(),
-    };
-
-    this.messageHistory.push(message);
-    this.updateChatBox();
-  }
-
-  // Update the chat box with all messages
-  private updateChatBox(): void {
-    // Clear the content first
-    this.chatBox.setContent('');
-
-    // Build the content and add it with setContent
+  /**
+   * Render the entire chat history
+   */
+  private renderChatHistory(): void {
     let content = '';
-    for (const message of this.messageHistory) {
-      const timeString = message.timestamp.toLocaleTimeString();
-
-      switch (message.sender) {
-        case 'user':
-          content += `{bold}{${this.config.colors.userMessage}-fg}[${this.config.labels.user}] ${timeString}{/${this.config.colors.userMessage}-fg}{/bold}\n${message.content}\n\n`;
-          break;
-        case 'assistant':
-          content += `{bold}{${this.config.colors.assistantMessage}-fg}[${this.config.labels.assistant}] ${timeString}{/${this.config.colors.assistantMessage}-fg}{/bold}\n${message.content}\n\n`;
-          break;
-        case 'system':
-          content += `{bold}{${this.config.colors.systemMessage}-fg}[${this.config.labels.system}] ${timeString}{/${this.config.colors.systemMessage}-fg}{/bold}\n${message.content}\n\n`;
-          break;
+    
+    for (const message of this.chatHistory) {
+      const prefix = message.role === 'user' ? '{green-fg}You:{/green-fg} ' : '{yellow-fg}AI:{/yellow-fg} ';
+      if (content) {
+        content += '\n\n';
       }
+      content += prefix + message.content;
+    }
+    
+    this.chatBox.setContent(content);
+    this.chatBox.setScrollPerc(100);
+    this.screen.render();
+  }
+
+  /**
+   * Show model selection dialog
+   */
+  private async showModelSelection(): Promise<void> {
+    // Create modal list
+    const list = blessed.list({
+      top: 'center',
+      left: 'center',
+      width: '70%',
+      height: '70%',
+      tags: true,
+      border: {
+        type: 'line',
+      },
+      style: {
+        selected: {
+          bg: 'blue',
+        },
+        border: {
+          fg: 'white',
+        },
+      },
+      label: ' Select a model ',
+      scrollable: true,
+      keys: true,
+      vi: true,
+    });
+
+    // Try to refresh models
+    try {
+      this.availableModels = await getAvailableModels();
+    } catch (error) {
+      console.error('Failed to refresh models:', error);
     }
 
-    this.chatBox.setContent(content);
-    this.chatBox.scrollTo(this.chatBox.getScrollHeight());
+    // Add models to list
+    const activeModel = getActiveModel();
+    const items = this.availableModels.map(model => {
+      let label = model.name;
+      if (model.id === activeModel.id) {
+        label = '{green-fg}' + label + ' (active){/green-fg}';
+      }
+      return label;
+    });
+    list.setItems(items);
+
+    // Add list to screen
+    this.screen.append(list);
+    list.focus();
+
+    // Handle selection
+    list.on('select', async (_, index) => {
+      const selectedModel = this.availableModels[index];
+      if (selectedModel) {
+        setActiveModel(selectedModel.id);
+        this.updateStatus();
+      }
+      
+      // Remove list and render screen
+      list.detach();
+      this.screen.render();
+      this.inputBox.focus();
+    });
+
+    // Handle escape
+    list.key(['escape', 'q'], () => {
+      list.detach();
+      this.screen.render();
+      this.inputBox.focus();
+    });
+
+    this.screen.render();
   }
 }
