@@ -1,0 +1,25 @@
+{
+  "colors": {
+    "border": "blue",
+    "userMessage": "white",
+    "assistantMessage": "green",
+    "systemMessage": "yellow",
+    "statusBar": {
+      "foreground": "white",
+      "background": "blue"
+    }
+  },
+  "layout": {
+    "chatBoxHeight": "90%",
+    "inputBoxHeight": 3,
+    "scrollbarStyle": {
+      "trackBg": "gray"
+    }
+  },
+  "labels": {
+    "user": "You",
+    "assistant": "KOTA AI",
+    "system": "System",
+    "statusBar": "{bold}KOTA AI{/bold} | Press Ctrl+C to exit | Enter to send | Up/Down for history"
+  }
+}

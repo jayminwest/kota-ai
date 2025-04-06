@@ -1,0 +1,25 @@
+{
+  "servers": [
+    {
+      "name": "exa-search",
+      "displayName": "Exa Search",
+      "description": "Search the web with Exa",
+      "transportType": "http",
+      "connection": {
+        "url": "https://example.com/exa-mcp",
+        "apiKey": "YOUR_API_KEY"
+      },
+      "isDefault": true
+    },
+    {
+      "name": "local-tools",
+      "displayName": "Local Development Tools",
+      "description": "Local development tools",
+      "transportType": "stdio",
+      "connection": {
+        "command": "node",
+        "args": ["./local-mcp-server.js"]
+      }
+    }
+  ]
+}

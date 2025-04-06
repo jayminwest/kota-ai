@@ -32,8 +32,4 @@ Thumbs.db
 
 # Aider specific files (keep this if you use Aider)
 .aider*
-
-# Test artifacts
-coverage/
-.vitest-cache/
-test/temp/
+.env
