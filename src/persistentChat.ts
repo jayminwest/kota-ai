@@ -1,354 +1,671 @@
 import blessed from 'blessed';
-import { execCommand } from './commands.js';
-import { AnthropicService } from './anthropicService.js';
+import {
+  chatWithModel,
+  getActiveModel,
+  listModels,
+  setActiveModel,
+  ModelConfig,
+  ModelProvider,
+  getAvailableModels,
+} from './model-commands.js';
 import { MCPManager } from './mcpManager.js';
-
-interface ChatMessage {
-  content: string;
-  sender: 'user' | 'assistant' | 'system';
-  timestamp: Date;
-}
+import { loadChatConfig, ChatInterfaceConfig } from './config.js';
 
 export class PersistentChatInterface {
   private screen: blessed.Widgets.Screen;
   private chatBox: blessed.Widgets.BoxElement;
   private inputBox: blessed.Widgets.TextareaElement;
   private statusBar: blessed.Widgets.BoxElement;
-  private messageHistory: ChatMessage[] = [];
-  private inputHistory: string[] = [];
-  private inputHistoryIndex: number = -1;
-  private anthropicService: AnthropicService | null = null;
+  private chatHistory: { role: 'user' | 'ai'; content: string }[] = [];
+  private isProcessing = false;
+  private availableModels: ModelConfig[] = [];
   private mcpManager: MCPManager = MCPManager.getInstance();
+  private config: ChatInterfaceConfig;
+  private exitConfirmationBox: blessed.Widgets.BoxElement | null = null;
+  private modelSelectionBox: blessed.Widgets.ListElement | null = null;
 
   constructor() {
-    // Initialize the blessed screen
+    // Load configuration
+    this.config = loadChatConfig();
+
+    // Initialize blessed screen
     this.screen = blessed.screen({
       smartCSR: true,
-      title: 'KOTA AI Chat Interface',
+      title: 'KOTA - Knowledge Oriented Thinking Assistant',
     });
 
-    // Create the chat message display box
+    // Create chat box for displaying conversation
     this.chatBox = blessed.box({
       top: 0,
       left: 0,
       width: '100%',
-      height: '90%',
-      tags: true,
+      height: this.config.layout.chatBoxHeight || '90%',
       scrollable: true,
       alwaysScroll: true,
-      scrollbar: {
-        ch: ' ',
-        track: {
-          bg: 'gray',
-        },
-        style: {
-          inverse: true,
-        },
-      },
+      tags: true,
       border: {
         type: 'line',
       },
       style: {
         border: {
-          fg: 'blue',
+          fg: this.config.colors.border || 'blue',
         },
       },
     });
 
-    // Create the input box
+    // Create input box for user messages
     this.inputBox = blessed.textarea({
       bottom: 1,
       left: 0,
       width: '100%',
-      height: 3,
-      inputOnFocus: true,
+      height: this.config.layout.inputBoxHeight || '10%',
       border: {
         type: 'line',
       },
       style: {
         border: {
-          fg: 'blue',
+          fg: this.config.colors.border || 'blue',
         },
       },
+      inputOnFocus: true,
     });
 
-    // Create the status bar
+    // Create status bar
     this.statusBar = blessed.box({
       bottom: 0,
       left: 0,
       width: '100%',
       height: 1,
-      tags: true,
       content:
-        '{bold}KOTA AI{/bold} | Press Ctrl+C to exit | Enter to send | Up/Down for history',
+        ' Press Ctrl+C or type /exit to exit, Ctrl+M to change model, ESC for menu',
+      tags: true,
+      style: {
+        fg: this.config.colors.statusBar.foreground || 'white',
+        bg: this.config.colors.statusBar.background || 'blue',
+      },
+    });
+
+    // Add elements to screen
+    this.screen.append(this.chatBox);
+    this.screen.append(this.inputBox);
+    this.screen.append(this.statusBar);
+
+    // Add multiple exit methods
+    this.setupExitHandlers();
+
+    // Setup model selection shortcut
+    this.screen.key(['C-m'], () => {
+      this.showModelSelection();
+    });
+
+    // Setup MCP connection information shortcut
+    this.screen.key(['C-p'], () => {
+      this.showMCPInfoBox();
+    });
+
+    this.inputBox.key('enter', async () => {
+      await this.handleUserInput();
+    });
+
+    // Setup global exception handler
+    process.on('uncaughtException', (error) => {
+      console.error('Uncaught exception:', error);
+      this.cleanupAndExit();
+    });
+
+    // Focus input
+    this.inputBox.focus();
+
+    // Welcome message
+    this.addMessage('ai', 'Welcome to KOTA! How can I help you today?\n\nTips:\n• Press Ctrl+M to select a different AI model\n• Press Ctrl+P to view MCP connection status\n• Type /exit or press ESC and confirm to exit');
+    this.updateStatus();
+  }
+
+  /**
+   * Show MCP connection information
+   */
+
+  /**
+   * Show MCP connection information
+   */
+  private showMCPInfoBox(): void {
+    const connected = this.mcpManager.isConnectedToServer();
+
+    const infoBox = blessed.box({
+      top: 'center',
+      left: 'center',
+      width: '70%',
+      height: '70%',
+      tags: true,
+      border: {
+        type: 'line',
+      },
+      style: {
+        border: {
+          fg: 'white',
+        },
+      },
+      label: ' MCP Connection Status ',
+      scrollable: true,
+    });
+
+    // Set content based on connection status
+    if (connected) {
+      infoBox.setContent(
+        '{green-fg}✓ Connected{/green-fg} to MCP server\n\n' +
+        'Your AI chat now has access to context from the MCP server.\n\n' +
+        'To disconnect from the MCP server, use the command:\n' +
+        '$ kota mcp disconnect'
+      );
+    } else {
+      infoBox.setContent(
+        '{red-fg}✗ Not connected{/red-fg} to any MCP server\n\n' +
+        'You can connect to an MCP server from the command line using:\n' +
+        '$ kota mcp connect [server-name]\n\n' +
+        'To list available servers:\n' +
+        '$ kota mcp list\n\n' +
+        'For more information about MCP commands:\n' +
+        '$ kota help'
+      );
+    }
+
+    // Close on escape key
+    infoBox.key(['escape', 'q'], () => {
+      this.screen.remove(infoBox);
+      this.screen.render();
+      this.inputBox.focus();
+    });
+
+    this.screen.append(infoBox);
+    this.screen.render();
+  }
+  /**
+   * Setup all exit handlers
+   */
+  private setupExitHandlers(): void {
+    // Method 1: Handle CTRL+C via blessed screen
+    this.screen.key(['C-c'], () => {
+      this.cleanupAndExit();
+    });
+
+    // Method 2: Use raw keypress events to catch CTRL+C even if blessed captures it
+    this.screen.program.on('keypress', (ch, key) => {
+      if (key && key.ctrl && key.name === 'c') {
+        this.cleanupAndExit();
+      } else if (key && key.name === 'escape') {
+        this.showExitConfirmation();
+      }
+    });
+
+    // Method 3: Process signal handlers
+    const exitHandler = () => {
+      this.cleanupAndExit();
+    };
+
+    process.on('SIGINT', exitHandler);
+    process.on('SIGTERM', exitHandler);
+  }
+
+  /**
+   * Show exit confirmation dialog
+   */
+  private showExitConfirmation(): void {
+    // Don't show confirmation if it's already visible
+    if (this.exitConfirmationBox) return;
+
+    // Create confirmation box
+    this.exitConfirmationBox = blessed.box({
+      top: 'center',
+      left: 'center',
+      width: '50%',
+      height: '30%',
+      content: 'Are you sure you want to exit?',
+      align: 'center',
+      valign: 'middle',
+      border: {
+        type: 'line',
+      },
+      style: {
+        border: {
+          fg: 'red',
+        },
+        bg: 'black',
+        fg: 'white',
+      },
+    });
+
+    // Add buttons
+    const yesButton = blessed.button({
+      parent: this.exitConfirmationBox,
+      bottom: 3,
+      left: '25%-10',
+      width: 10,
+      height: 3,
+      content: 'Yes',
+      align: 'center',
+      valign: 'middle',
+      style: {
+        bg: 'red',
+        fg: 'white',
+        focus: {
+          bg: 'dark-red',
+        },
+        hover: {
+          bg: 'dark-red',
+        },
+      },
+      border: {
+        type: 'line',
+      },
+    });
+
+    const noButton = blessed.button({
+      parent: this.exitConfirmationBox,
+      bottom: 3,
+      right: '25%-10',
+      width: 10,
+      height: 3,
+      content: 'No',
+      align: 'center',
+      valign: 'middle',
+      style: {
+        bg: 'green',
+        fg: 'white',
+        focus: {
+          bg: 'dark-green',
+        },
+        hover: {
+          bg: 'dark-green',
+        },
+      },
+      border: {
+        type: 'line',
+      },
+    });
+
+    // Events
+    yesButton.on('press', () => {
+      this.cleanupAndExit();
+    });
+
+    noButton.on('press', () => {
+      this.closeExitConfirmation();
+    });
+
+    // Key handling
+    this.exitConfirmationBox.key(['y', 'Y'], () => {
+      this.cleanupAndExit();
+    });
+
+    this.exitConfirmationBox.key(['n', 'N', 'escape'], () => {
+      this.closeExitConfirmation();
+    });
+
+    // Add to screen and focus
+    this.screen.append(this.exitConfirmationBox);
+    yesButton.focus();
+    this.screen.render();
+  }
+
+  /**
+   * Close exit confirmation dialog
+   */
+  private closeExitConfirmation(): void {
+    if (this.exitConfirmationBox) {
+      this.screen.remove(this.exitConfirmationBox);
+      this.exitConfirmationBox = null;
+      this.inputBox.focus();
+      this.screen.render();
+    }
+  }
+
+  /**
+   * Clean up resources and exit
+   */
+  private cleanupAndExit(): void {
+    try {
+      // Ensure MCP server is disconnected
+      this.mcpManager.disconnect();
+
+      // Reset terminal state
+      this.screen.program.disableMouse();
+      this.screen.program.showCursor();
+      this.screen.program.normalBuffer();
+
+      // Destroy the screen to restore terminal
+      if (this.screen) {
+        this.screen.destroy();
+      }
+    } catch (error) {
+      console.error('Error during cleanup:', error);
+    } finally {
+      // Force exit regardless of any errors
+      console.log('KOTA chat session ended.');
+      process.exit(0);
+    }
+  }
+
+  /**
+   * Start the chat interface
+   */
+  public async start(): Promise<void> {
+    // Load available models
+    try {
+      this.availableModels = await getAvailableModels();
+      this.updateStatus();
+      this.screen.render();
+    } catch (error) {
+      this.addMessage('ai', `Error loading models: ${error}`);
+    }
+
+    // Render the interface
+    this.screen.render();
+  }
+
+  /**
+   * Add a message to the chat box
+   */
+  private addMessage(role: 'user' | 'ai', content: string): void {
+    // Add to history
+    this.chatHistory.push({ role, content });
+
+    // Format and display message
+    const prefix =
+      role === 'user'
+        ? '{green-fg}You:{/green-fg} '
+        : '{yellow-fg}AI:{/yellow-fg} ';
+    const formattedMessage = prefix + content;
+
+    // Append to chat box
+    if (this.chatBox.getContent()) {
+      this.chatBox.setContent(
+        this.chatBox.getContent() + '\n\n' + formattedMessage
+      );
+    } else {
+      this.chatBox.setContent(formattedMessage);
+    }
+
+    // Scroll to bottom
+    this.chatBox.setScrollPerc(100);
+    this.screen.render();
+  }
+
+  /**
+   * Update the status bar with current model and MCP info
+   */
+  private updateStatus(): void {
+    const activeModel = getActiveModel();
+    let mcpStatus = this.mcpManager.isConnectedToServer() ? 
+      '{green-fg}MCP Connected{/green-fg}' : 
+      '{gray-fg}MCP Disconnected{/gray-fg}';
+      
+    let statusText = ` Model: ${activeModel.name} | ${mcpStatus} | Ctrl+M: Change Model | Ctrl+P: MCP Info | Ctrl+C/ESC: Exit`;
+
+    // Add warning if no API key is set
+    if (
+      !process.env.ANTHROPIC_API_KEY &&
+      activeModel.provider === ModelProvider.ANTHROPIC
+    ) {
+      statusText = ` WARNING: No ANTHROPIC_API_KEY set | ${statusText}`;
+    }
+
+    this.statusBar.setContent(statusText);
+    this.screen.render();
+  }
+
+  /**
+   * Handle user input from the input box
+   */
+  private async handleUserInput(): Promise<void> {
+    if (this.isProcessing) return;
+
+    const message = this.inputBox.getValue();
+    if (!message.trim()) return;
+
+    // Check for exit command
+    if (message.trim().toLowerCase() === '/exit') {
+      this.cleanupAndExit();
+      return;
+    }
+
+    // Clear input box
+    this.inputBox.setValue('');
+    this.screen.render();
+
+    // Display user message
+    this.addMessage('user', message);
+
+    this.isProcessing = true;
+    // Show thinking message
+    this.statusBar.setContent(' AI is thinking...');
+    this.screen.render();
+
+    try {
+      let response = '';
+
+      await chatWithModel(
+        message,
+        getActiveModel(),
+        (chunk) => {
+          // Add to response
+          response += chunk;
+
+          // Update chatBox with current response
+          const lastMsgIdx = this.chatHistory.length;
+          if (
+            lastMsgIdx > 0 &&
+            this.chatHistory[lastMsgIdx - 1].role === 'ai'
+          ) {
+            // Update the existing AI message
+            this.chatHistory[lastMsgIdx - 1].content = response;
+          } else {
+            // Add a new AI message
+            this.chatHistory.push({ role: 'ai', content: response });
+          }
+
+          // Redraw chat
+          this.renderChatHistory();
+        },
+        () => {
+          // When complete, add the message to history if not already added
+          if (
+            this.chatHistory.length === 0 ||
+            this.chatHistory[this.chatHistory.length - 1].role !== 'ai'
+          ) {
+            this.addMessage('ai', response);
+          }
+          this.isProcessing = false;
+          this.updateStatus();
+        }
+      );
+    } catch (error) {
+      this.addMessage(
+        'ai',
+        `Error: ${error instanceof Error ? error.message : String(error)}`
+      );
+      this.isProcessing = false;
+      this.updateStatus();
+    }
+  }
+
+  /**
+   * Render the entire chat history
+   */
+  private renderChatHistory(): void {
+    let content = '';
+
+    for (const message of this.chatHistory) {
+      const prefix =
+        message.role === 'user'
+          ? '{green-fg}You:{/green-fg} '
+          : '{yellow-fg}AI:{/yellow-fg} ';
+      if (content) {
+        content += '\n\n';
+      }
+      content += prefix + message.content;
+    }
+
+    this.chatBox.setContent(content);
+    this.chatBox.setScrollPerc(100);
+    this.screen.render();
+  }
+
+  /**
+   * Show model selection dialog
+   */
+  private async showModelSelection(): Promise<void> {
+    // Close any existing model selection
+    if (this.modelSelectionBox) {
+      this.screen.remove(this.modelSelectionBox);
+      this.modelSelectionBox = null;
+    }
+
+    // Create modal list
+    this.modelSelectionBox = blessed.list({
+      top: 'center',
+      left: 'center',
+      width: '70%',
+      height: '70%',
+      tags: true,
+      border: {
+        type: 'line',
+      },
+      style: {
+        selected: {
+          bg: 'blue',
+          fg: 'white',
+          bold: true,
+        },
+        border: {
+          fg: 'white',
+        },
+        scrollbar: {
+          bg: 'blue',
+        },
+      },
+      label: ' Select AI Model ',
+      scrollable: true,
+      keys: true,
+      vi: true,
+    });
+
+    // Add a header with instructions
+    const header = blessed.box({
+      parent: this.modelSelectionBox,
+      top: 0,
+      left: 0,
+      width: '100%-2',
+      height: 3,
+      content: '{center}Select a model and press Enter, or press Escape to cancel{/center}',
+      tags: true,
       style: {
         fg: 'white',
         bg: 'blue',
       },
     });
 
-    // Add the components to the screen
-    this.screen.append(this.chatBox);
-    this.screen.append(this.inputBox);
-    this.screen.append(this.statusBar);
+    // Adjust list position below header
+    this.modelSelectionBox.top = 3;
+    this.modelSelectionBox.height = '100%-6';
 
-    // Handle key events
-    this.inputBox.key(['enter'], () => this.handleInput());
-    this.inputBox.key(['up'], () => this.navigateInputHistory('up'));
-    this.inputBox.key(['down'], () => this.navigateInputHistory('down'));
-
-    // Add Ctrl+C handler to inputBox to ensure it works when input has focus
-    this.inputBox.key(['C-c'], () => this.cleanupAndExit());
-
-    // Exit on Escape, Control-C, or q
-    this.screen.key(['escape', 'C-c', 'q'], () => this.cleanupAndExit());
-
-    // Focus the input box by default
-    this.inputBox.focus();
-
-    // Initialize Anthropic service if API key is available
+    // Try to refresh models
     try {
-      this.anthropicService = AnthropicService.getInstance();
-    } catch (error) {
-      this.addSystemMessage(
-        `Error initializing Anthropic service: ${
-          error instanceof Error ? error.message : String(error)
-        }`
+      this.availableModels = await getAvailableModels();
+
+      // Group models by provider
+      const anthropicModels = this.availableModels.filter(
+        model => model.provider === ModelProvider.ANTHROPIC
       );
-      this.addSystemMessage(
-        'Please set the ANTHROPIC_API_KEY environment variable to use AI chat functionality.'
+      const ollamaModels = this.availableModels.filter(
+        model => model.provider === ModelProvider.OLLAMA
       );
-    }
 
-    // Display welcome message
-    this.addSystemMessage(
-      'Welcome to KOTA AI! Type a message to chat with Claude or use /run followed by a command to execute KOTA commands.'
-    );
-    this.addSystemMessage(
-      'MCP commands: /run mcp connect <path>, /run mcp disconnect, /run mcp status'
-    );
-  }
+      // Add models to list with grouping
+      const activeModel = getActiveModel();
+      let items: string[] = [];
 
-  // Clean up resources and exit
-  private cleanupAndExit(): void {
-    // Ensure MCP server is disconnected
-    this.mcpManager.disconnect();
-    process.exit(0);
-  }
-
-  // Start the chat interface
-  public start(): void {
-    this.screen.render();
-  }
-
-  // Handle user input
-  private handleInput(): void {
-    const input = this.inputBox.getValue().trim();
-
-    if (input === '') return;
-
-    // Add to input history
-    this.inputHistory.unshift(input);
-    if (this.inputHistory.length > 50) {
-      this.inputHistory.pop();
-    }
-    this.inputHistoryIndex = -1;
-
-    // Clear the input box
-    this.inputBox.setValue('');
-
-    // Add user message to chat
-    this.addUserMessage(input);
-
-    // Process the input
-    this.processInput(input);
-
-    // Render the screen
-    this.screen.render();
-  }
-
-  // Process the user input
-  private async processInput(input: string): Promise<void> {
-    if (input.startsWith('/run ')) {
-      // Handle command
-      const command = input.substring(5).trim();
-      this.addSystemMessage(`Executing command: ${command}`);
-
-      try {
-        const result = await this.executeCommand(command.split(' '));
-        this.addSystemMessage(
-          `Command output:\n${result || 'Command executed successfully.'}`
-        );
-      } catch (error) {
-        this.addSystemMessage(
-          `Error executing command: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
-    } else {
-      // Handle chat message
-      if (!this.anthropicService) {
-        this.addSystemMessage(
-          'Anthropic service is not initialized. Please set the ANTHROPIC_API_KEY environment variable.'
-        );
-        return;
-      }
-
-      this.addAssistantMessage('Thinking...');
-
-      try {
-        await this.anthropicService.chatWithAI(
-          input,
-          (chunk) => {
-            this.updateLastAssistantMessage((existing) => existing + chunk);
-            this.screen.render();
-          },
-          () => {
-            // When streaming is complete, do nothing special
-            this.screen.render();
+      if (anthropicModels.length > 0) {
+        items.push('{bold}─── Anthropic Claude Models ───{/bold}');
+        anthropicModels.forEach(model => {
+          let label = `  ${model.name}`;
+          if (model.id === activeModel.id) {
+            label = `  {green-fg}${model.name} ✓{/green-fg}`;
           }
-        );
-      } catch (error) {
-        this.addSystemMessage(
-          `Error: ${error instanceof Error ? error.message : String(error)}`
-        );
+          items.push(label);
+        });
       }
-    }
 
-    this.screen.render();
-  }
+      if (ollamaModels.length > 0) {
+        items.push('{bold}─── Local Ollama Models ───{/bold}');
+        ollamaModels.forEach(model => {
+          let label = `  ${model.name}`;
+          if (model.id === activeModel.id) {
+            label = `  {green-fg}${model.name} ✓{/green-fg}`;
+          }
+          items.push(label);
+        });
+      }
 
-  // Execute a command and capture its output
-  private async executeCommand(args: string[]): Promise<string> {
-    // Capture console output
-    let output = '';
-    const originalConsoleLog = console.log;
-    const originalConsoleError = console.error;
+      this.modelSelectionBox.setItems(items);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    console.log = (...args: any[]) => {
-      output += args.join(' ') + '\n';
-    };
+      // Map selection index back to model index
+      const modelMap = new Map<number, ModelConfig>();
+      let listIndex = 0;
+      
+      // Skip header items
+      anthropicModels.length > 0 && listIndex++;
+      anthropicModels.forEach(model => {
+        modelMap.set(listIndex++, model);
+      });
+      
+      ollamaModels.length > 0 && listIndex++;
+      ollamaModels.forEach(model => {
+        modelMap.set(listIndex++, model);
+      });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    console.error = (...args: any[]) => {
-      output += 'ERROR: ' + args.join(' ') + '\n';
-    };
-
-    try {
-      // Execute the command
-      await execCommand(args);
-      return output.trim();
-    } finally {
-      // Restore console methods
-      console.log = originalConsoleLog;
-      console.error = originalConsoleError;
-    }
-  }
-
-  // Navigate through input history
-  private navigateInputHistory(direction: 'up' | 'down'): void {
-    if (this.inputHistory.length === 0) return;
-
-    if (direction === 'up') {
-      this.inputHistoryIndex = Math.min(
-        this.inputHistoryIndex + 1,
-        this.inputHistory.length - 1
-      );
-    } else {
-      this.inputHistoryIndex = Math.max(this.inputHistoryIndex - 1, -1);
-    }
-
-    if (this.inputHistoryIndex === -1) {
-      this.inputBox.setValue('');
-    } else {
-      this.inputBox.setValue(this.inputHistory[this.inputHistoryIndex]);
-    }
-
-    this.screen.render();
-  }
-
-  // Add a user message to the chat
-  private addUserMessage(content: string): void {
-    const message: ChatMessage = {
-      content,
-      sender: 'user',
-      timestamp: new Date(),
-    };
-
-    this.messageHistory.push(message);
-    this.updateChatBox();
-  }
-
-  // Add an assistant message to the chat
-  private addAssistantMessage(content: string): void {
-    const message: ChatMessage = {
-      content,
-      sender: 'assistant',
-      timestamp: new Date(),
-    };
-
-    this.messageHistory.push(message);
-    this.updateChatBox();
-  }
-
-  // Update the last assistant message (used for updating "thinking" states and streaming)
-  private updateLastAssistantMessage(
-    contentUpdater: string | ((existing: string) => string)
-  ): void {
-    // Find the last assistant message
-    for (let i = this.messageHistory.length - 1; i >= 0; i--) {
-      if (this.messageHistory[i].sender === 'assistant') {
-        if (typeof contentUpdater === 'string') {
-          this.messageHistory[i].content = contentUpdater;
-        } else {
-          this.messageHistory[i].content = contentUpdater(
-            this.messageHistory[i].content
-          );
+      // Handle selection
+      this.modelSelectionBox.on('select', (_, index) => {
+        const selectedModel = modelMap.get(index);
+        if (selectedModel) {
+          setActiveModel(selectedModel.id);
+          this.updateStatus();
+          this.addMessage('ai', `Model changed to ${selectedModel.name}`);
         }
-        this.updateChatBox();
-        break;
-      }
-    }
-  }
 
-  // Add a system message to the chat
-  private addSystemMessage(content: string): void {
-    const message: ChatMessage = {
-      content,
-      sender: 'system',
-      timestamp: new Date(),
-    };
-
-    this.messageHistory.push(message);
-    this.updateChatBox();
-  }
-
-  // Update the chat box with all messages
-  private updateChatBox(): void {
-    // Clear the content first
-    this.chatBox.setContent('');
-
-    // Build the content and add it with setContent
-    let content = '';
-    for (const message of this.messageHistory) {
-      const timeString = message.timestamp.toLocaleTimeString();
-
-      switch (message.sender) {
-        case 'user':
-          content += `{bold}[You] ${timeString}{/bold}\n${message.content}\n\n`;
-          break;
-        case 'assistant':
-          content += `{bold}{green-fg}[KOTA AI] ${timeString}{/green-fg}{/bold}\n${message.content}\n\n`;
-          break;
-        case 'system':
-          content += `{bold}{yellow-fg}[System] ${timeString}{/yellow-fg}{/bold}\n${message.content}\n\n`;
-          break;
-      }
+        // Remove list and render screen
+        if (this.modelSelectionBox) {
+          this.screen.remove(this.modelSelectionBox);
+          this.modelSelectionBox = null;
+        }
+        this.screen.render();
+        this.inputBox.focus();
+      });
+    } catch (error) {
+      console.error('Failed to refresh models:', error);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      
+      // Show error message in the list
+      this.modelSelectionBox.setItems([
+        '{red-fg}Error loading models:{/red-fg}',
+        `  ${errorMsg}`,
+        '',
+        '{bold}Press Escape to close{/bold}'
+      ]);
     }
 
-    this.chatBox.setContent(content);
-    this.chatBox.scrollTo(this.chatBox.getScrollHeight());
+    // Handle escape
+    this.modelSelectionBox.key(['escape', 'q'], () => {
+      if (this.modelSelectionBox) {
+        this.screen.remove(this.modelSelectionBox);
+        this.modelSelectionBox = null;
+      }
+      this.screen.render();
+      this.inputBox.focus();
+    });
+
+    // Add list to screen
+    this.screen.append(this.modelSelectionBox);
+    this.modelSelectionBox.focus();
+    this.screen.render();
   }
 }
