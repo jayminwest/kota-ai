@@ -84,7 +84,12 @@ kota-ai/
 │   ├── cli/          # Command-line interface
 │   ├── utils/        # Utility functions
 │   └── types/        # TypeScript type definitions
-├── tests/            # Test suite
+├── test/             # Test suite
+│   ├── unit/         # Unit tests
+│   ├── integration/  # Integration tests
+│   ├── e2e/          # End-to-end tests
+│   ├── fixtures/     # Test data
+│   └── helpers/      # Test utilities
 └── tsconfig.json     # TypeScript configuration
 ```
 
@@ -113,12 +118,23 @@ kota-ai/
 3. **Testing**
 
    ```bash
-   # Run tests
+   # Run all tests
    npm test
 
-   # Test CLI
-   kota --help
+   # Run tests with coverage report
+   npm run test:coverage
+
+   # Run only unit tests
+   npm run test:unit
+   
+   # Run tests in watch mode
+   npm run test:watch
+   
+   # Run tests with UI visualizer
+   npm run test:ui
    ```
+
+   See [TESTING.md](./TESTING.md) for detailed testing guidelines.
 
 4. **Publishing**
    ```bash
