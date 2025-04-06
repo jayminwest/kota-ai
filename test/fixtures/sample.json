@@ -1,0 +1,11 @@
+{
+  "name": "sample-fixture",
+  "description": "A sample fixture file for testing",
+  "data": {
+    "key1": "value1",
+    "key2": "value2",
+    "nested": {
+      "nestedKey": "nestedValue"
+    }
+  }
+}
