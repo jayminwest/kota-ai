@@ -248,7 +248,7 @@ async function handleMCPCommands(args: string[]): Promise<void> {
   switch (subCommand) {
     case 'connect': {
       if (subCommandArgs.length === 0) {
-        await connectMCPServer([]);  // Connect to default server
+        await connectMCPServer([]); // Connect to default server
       } else {
         await connectMCPServer(subCommandArgs);
       }
@@ -293,7 +293,7 @@ async function handleMCPCommands(args: string[]): Promise<void> {
     default: {
       // Get instance just for backward compatibility with direct MCP server path
       const mcpManager = MCPManager.getInstance();
-      
+
       try {
         // Assume the first argument is a direct path to an MCP server
         const mcpPath = args[0];
