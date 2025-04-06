@@ -6,7 +6,7 @@ import { execCommand } from '../../src/commands.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { createMock } from '../helpers/test-utils';
+import { createMock } from '../helpers/test-utils.js';
 
 // Mock dependencies
 vi.mock('node:fs');

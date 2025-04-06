@@ -9,7 +9,7 @@ import { promisify } from 'node:util';
 import path from 'node:path';
 import fs from 'node:fs';
 import os from 'node:os';
-import { createTempFile, createTestDir } from '../helpers/test-utils';
+import { createTempFile, createTestDir } from '../helpers/test-utils.js';
 
 const execAsync = promisify(exec);
 

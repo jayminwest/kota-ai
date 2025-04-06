@@ -5,7 +5,7 @@
  * It contains global setup code that runs once before all test suites.
  */
 
-import { beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+import { beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 
 // Environment variables for testing
 process.env.NODE_ENV = 'test';

@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { MCPManager } from '../../src/mcpManager.js';
 import { execCommand } from '../../src/commands.js';
-import { createMock } from '../helpers/test-utils';
+import { createMock } from '../helpers/test-utils.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 vi.mock('node:child_process', () => {
   return {
     spawn: vi.fn(() => ({
-      on: vi.fn().mockImplementation(function(event, callback) {
+      on: vi.fn().mockImplementation(function(this: any, event, callback) {
         if (event === 'spawn') {
           callback();
         }
