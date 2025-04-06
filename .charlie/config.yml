@@ -5,6 +5,7 @@ ignorePatterns:
   - '**/*.lock.json'
   - '**/*.lockb'
   - '**/.env'
+  - 'coverage/'
   # Add any other project-specific patterns Charlie should ignore
 
 # Commands Charlie can use to verify changes
